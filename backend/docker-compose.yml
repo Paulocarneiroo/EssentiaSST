@@ -1,0 +1,22 @@
+services:
+  api-essentiasst-db:
+    image: postgres:16-alpine
+    container_name: api-essentiasst-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_NAME:-essentiasst}
+      POSTGRES_USER: ${DB_USER:-essentiasst}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-changeme}
+    ports:
+      - "${DB_PORT:-5432}:5432"
+    volumes:
+      - api-essentiasst-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-essentiasst} -d ${DB_NAME:-essentiasst}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  api-essentiasst-db-data:
+    name: api-essentiasst-db-data

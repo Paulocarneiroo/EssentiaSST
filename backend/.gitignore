@@ -1,0 +1,30 @@
+# Dependências
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Variáveis de ambiente
+.env
+.env.local
+.env.*.local
+
+# Build / coverage
+dist/
+build/
+coverage/
+.nyc_output/
+
+# Logs
+logs/
+*.log
+
+# Editores e SOs
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Docker volumes locais
+postgres-data/
