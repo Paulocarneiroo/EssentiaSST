@@ -1,0 +1,91 @@
+import type {
+  Colaborador,
+  CreateColaboradorData,
+  UpdateColaboradorData,
+} from '../../domain/entities/Colaborador.js';
+import { ConflictError, NotFoundError, ValidationError } from '../../domain/errors/AppError.js';
+import {
+  validateCreateColaborador,
+  validateUpdateColaborador,
+} from '../../domain/validators/colaboradorValidator.js';
+import type { IColaboradorRepository } from '../ports/IColaboradorRepository.js';
+import type { IEmpresaRepository } from '../ports/IEmpresaRepository.js';
+
+export class ColaboradorService {
+  constructor(
+    private readonly colaboradorRepository: IColaboradorRepository,
+    private readonly empresaRepository: IEmpresaRepository,
+  ) {}
+
+  async list(empresaId?: string): Promise<Colaborador[]> {
+    if (empresaId) {
+      await this.ensureEmpresaExists(empresaId);
+    }
+    return this.colaboradorRepository.findAll(empresaId);
+  }
+
+  async getById(id: string): Promise<Colaborador> {
+    const colaborador = await this.colaboradorRepository.findById(id);
+    if (!colaborador) {
+      throw new NotFoundError(`Colaborador com id "${id}" não encontrado.`);
+    }
+    return colaborador;
+  }
+
+  async create(raw: CreateColaboradorData): Promise<Colaborador> {
+    const data = validateCreateColaborador(raw);
+    await this.ensureEmpresaExists(data.empresaId);
+
+    const duplicate = await this.colaboradorRepository.findByCpfAndEmpresa(data.cpf, data.empresaId);
+    if (duplicate) {
+      throw new ConflictError(`Já existe um colaborador com o CPF ${data.cpf} nesta empresa.`);
+    }
+
+    return this.colaboradorRepository.create(data);
+  }
+
+  async update(id: string, raw: UpdateColaboradorData): Promise<Colaborador> {
+    const data = validateUpdateColaborador(raw);
+    if (Object.keys(data).length === 0) {
+      throw new ValidationError('Informe ao menos um campo para atualização.');
+    }
+
+    const current = await this.colaboradorRepository.findById(id);
+    if (!current) {
+      throw new NotFoundError(`Colaborador com id "${id}" não encontrado.`);
+    }
+
+    const empresaId = data.empresaId ?? current.empresaId;
+    if (data.empresaId) {
+      await this.ensureEmpresaExists(data.empresaId);
+    }
+
+    const cpf = data.cpf ?? current.cpf;
+    if (data.cpf || data.empresaId) {
+      const duplicate = await this.colaboradorRepository.findByCpfAndEmpresa(cpf, empresaId);
+      if (duplicate && duplicate.id !== id) {
+        throw new ConflictError(`Já existe um colaborador com o CPF ${cpf} nesta empresa.`);
+      }
+    }
+
+    const updated = await this.colaboradorRepository.update(id, data);
+    if (!updated) {
+      throw new NotFoundError(`Colaborador com id "${id}" não encontrado.`);
+    }
+    return updated;
+  }
+
+  async remove(id: string): Promise<void> {
+    const deleted = await this.colaboradorRepository.delete(id);
+    if (!deleted) {
+      throw new NotFoundError(`Colaborador com id "${id}" não encontrado.`);
+    }
+  }
+
+  private async ensureEmpresaExists(empresaId: string): Promise<void> {
+    const empresa = await this.empresaRepository.findById(empresaId);
+    if (!empresa) {
+      throw new NotFoundError(`Empresa com id "${empresaId}" não encontrada.`);
+    }
+  }
+}

@@ -14,6 +14,7 @@ API REST do **EssentiaSST**, plataforma de Gestão de Segurança e Saúde no Tra
 - **ESLint** (typescript-eslint) + **Prettier** — qualidade e formatação de código.
 - **tsx** — execução direta de TypeScript em desenvolvimento (hot-reload via `--watch`).
 - **dotenv** — carregamento de variáveis de ambiente.
+- **swagger-ui-express** — documentação interativa OpenAPI 3.
 
 ---
 
@@ -22,14 +23,17 @@ API REST do **EssentiaSST**, plataforma de Gestão de Segurança e Saúde no Tra
 ```
 backend/
 ├── src/
-│   ├── config/         # Carregamento e validação de variáveis de ambiente
-│   ├── controllers/    # Camada HTTP — recebe request, delega ao service
-│   ├── database/       # Pool de conexões PostgreSQL
-│   ├── middlewares/    # Tratamento de erros, autenticação, etc.
-│   ├── routes/         # Definição das rotas Express
-│   ├── services/       # Regras de negócio (camada de aplicação)
-│   ├── utils/          # Utilitários transversais (logger, helpers)
-│   └── server.ts       # Bootstrap da aplicação
+│   ├── config/              # Carregamento e validação de variáveis de ambiente
+│   ├── controllers/         # Camada HTTP (MVC) — recebe request, delega ao service
+│   ├── domain/              # Entidades, validadores e erros de domínio
+│   ├── application/         # Services e ports (interfaces) — Clean Architecture
+│   ├── infrastructure/      # Repositórios Postgres, migrations e DI
+│   ├── database/            # Pool de conexões PostgreSQL
+│   ├── middlewares/         # Tratamento de erros, autenticação, etc.
+│   ├── routes/              # Definição das rotas Express
+│   ├── services/            # Serviços transversais (ex.: health)
+│   ├── utils/               # Utilitários transversais (logger, helpers)
+│   └── server.ts            # Bootstrap da aplicação
 ├── dist/               # Saída compilada do TypeScript (gerada por `npm run build`)
 ├── .env                # Variáveis locais (NÃO versionar)
 ├── .env.example        # Modelo de variáveis
@@ -75,6 +79,14 @@ npm run dev
 ```
 
 A API ficará disponível em `http://localhost:3000`.
+
+### Swagger (testar endpoints)
+
+Com a API rodando, abra no navegador:
+
+**http://localhost:3000/api/docs**
+
+A especificação OpenAPI em JSON está em `http://localhost:3000/api/docs/openapi.json`.
 
 ### Verificar saúde
 
@@ -146,9 +158,61 @@ docker compose down -v         # parar e apagar o volume
 
 ---
 
+## API — Empresas e Colaboradores
+
+### Empresas (`/api/empresas`)
+
+| Método   | Rota              | Descrição              |
+|----------|-------------------|------------------------|
+| `GET`    | `/`               | Lista todas as empresas |
+| `GET`    | `/:id`            | Busca por id (UUID)     |
+| `POST`   | `/`               | Cria empresa            |
+| `PUT`    | `/:id`            | Atualiza empresa        |
+| `DELETE` | `/:id`            | Remove empresa          |
+
+**Body (POST/PUT):**
+
+```json
+{
+  "cnpj": "12345678000199",
+  "razaoSocial": "Empresa Exemplo LTDA",
+  "nomeFantasia": "Exemplo SST",
+  "cnae": "6201500",
+  "grauRisco": 2
+}
+```
+
+### Colaboradores (`/api/colaboradores`)
+
+| Método   | Rota              | Descrição                              |
+|----------|-------------------|----------------------------------------|
+| `GET`    | `/`               | Lista todos (`?empresaId=` opcional)   |
+| `GET`    | `/:id`            | Busca por id (UUID)                    |
+| `POST`   | `/`               | Cria colaborador                       |
+| `PUT`    | `/:id`            | Atualiza colaborador                   |
+| `DELETE` | `/:id`            | Remove colaborador                     |
+
+**Body (POST/PUT):**
+
+```json
+{
+  "empresaId": "uuid-da-empresa",
+  "cpf": "12345678901",
+  "nome": "Maria Silva",
+  "dataNascimento": "1990-05-15",
+  "cargo": "Analista de SST",
+  "dataAdmissao": "2024-01-10",
+  "dataDemissao": null
+}
+```
+
+As migrations são aplicadas automaticamente na subida da API.
+
+---
+
 ## Próximas etapas
 
-- Modelagem das tabelas e migrations (Empresa, Colaborador, ASO, Risco, EventoESocial).
-- Implementação das interfaces de repositório (`IRepositorioASO`, etc.) seguindo DIP.
+- CRUD de ASO, Risco e EventoESocial.
+- Implementação das demais interfaces (`IRepositorioASO`, `IClienteESocial`, etc.) seguindo DIP.
 - Autenticação JWT e multi-tenancy.
 - Mensageria eSocial (eventos S-2210, S-2220, S-2240).
