@@ -35,7 +35,7 @@ Nesta segunda entrega são esboçadas as classes do núcleo do domínio com dois
 
 ---
 
-### 2.1 Diagrama de classes (UML simplificado)
+### 2.1 Diagrama de classes 
 
 ```
 DOMÍNIO                              SERVIÇOS DE APLICAÇÃO              ABSTRAÇÕES (DIP)

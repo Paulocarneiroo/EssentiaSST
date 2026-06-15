@@ -1,0 +1,17 @@
+{
+  "name": "essentiasst-frontend",
+  "version": "0.1.0",
+  "description": "SPA do EssentiaSST — Gestão de SST",
+  "private": true,
+  "scripts": {
+    "build": "tsc",
+    "watch": "tsc --watch",
+    "serve": "npx --yes serve . -l 5173",
+    "dev": "npm run build && npm run serve",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "typescript": "^5.5.3"
+  },
+  "license": "MIT"
+}
