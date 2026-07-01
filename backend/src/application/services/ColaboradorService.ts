@@ -17,26 +17,25 @@ export class ColaboradorService {
     private readonly empresaRepository: IEmpresaRepository,
   ) {}
 
-  async list(empresaId?: string): Promise<Colaborador[]> {
-    if (empresaId) {
-      await this.ensureEmpresaExists(empresaId);
-    }
-    return this.colaboradorRepository.findAll(empresaId);
+  /** Sempre escopado ao tenant — o usuário só vê colaboradores da própria empresa. */
+  async list(tenantId: string): Promise<Colaborador[]> {
+    return this.colaboradorRepository.findAll(tenantId);
   }
 
-  async getById(id: string): Promise<Colaborador> {
+  async getById(id: string, tenantId: string): Promise<Colaborador> {
     const colaborador = await this.colaboradorRepository.findById(id);
-    if (!colaborador) {
+    if (!colaborador || colaborador.empresaId !== tenantId) {
       throw new NotFoundError(`Colaborador com id "${id}" não encontrado.`);
     }
     return colaborador;
   }
 
-  async create(raw: CreateColaboradorData): Promise<Colaborador> {
-    const data = validateCreateColaborador(raw);
-    await this.ensureEmpresaExists(data.empresaId);
+  async create(raw: CreateColaboradorData, tenantId: string): Promise<Colaborador> {
+    // O tenant é sempre a empresa do usuário autenticado; ignora qualquer empresaId enviado no corpo.
+    const data = validateCreateColaborador({ ...raw, empresaId: tenantId });
+    await this.ensureEmpresaExists(tenantId);
 
-    const duplicate = await this.colaboradorRepository.findByCpfAndEmpresa(data.cpf, data.empresaId);
+    const duplicate = await this.colaboradorRepository.findByCpfAndEmpresa(data.cpf, tenantId);
     if (duplicate) {
       throw new ConflictError(`Já existe um colaborador com o CPF ${data.cpf} nesta empresa.`);
     }
@@ -44,27 +43,24 @@ export class ColaboradorService {
     return this.colaboradorRepository.create(data);
   }
 
-  async update(id: string, raw: UpdateColaboradorData): Promise<Colaborador> {
-    const data = validateUpdateColaborador(raw);
+  async update(id: string, raw: UpdateColaboradorData, tenantId: string): Promise<Colaborador> {
+    // Não é permitido mover um colaborador para outra empresa: descarta empresaId do payload.
+    const rest: UpdateColaboradorData = { ...raw };
+    delete rest.empresaId;
+    const data = validateUpdateColaborador(rest);
     if (Object.keys(data).length === 0) {
       throw new ValidationError('Informe ao menos um campo para atualização.');
     }
 
     const current = await this.colaboradorRepository.findById(id);
-    if (!current) {
+    if (!current || current.empresaId !== tenantId) {
       throw new NotFoundError(`Colaborador com id "${id}" não encontrado.`);
     }
 
-    const empresaId = data.empresaId ?? current.empresaId;
-    if (data.empresaId) {
-      await this.ensureEmpresaExists(data.empresaId);
-    }
-
-    const cpf = data.cpf ?? current.cpf;
-    if (data.cpf || data.empresaId) {
-      const duplicate = await this.colaboradorRepository.findByCpfAndEmpresa(cpf, empresaId);
+    if (data.cpf && data.cpf !== current.cpf) {
+      const duplicate = await this.colaboradorRepository.findByCpfAndEmpresa(data.cpf, tenantId);
       if (duplicate && duplicate.id !== id) {
-        throw new ConflictError(`Já existe um colaborador com o CPF ${cpf} nesta empresa.`);
+        throw new ConflictError(`Já existe um colaborador com o CPF ${data.cpf} nesta empresa.`);
       }
     }
 
@@ -75,11 +71,12 @@ export class ColaboradorService {
     return updated;
   }
 
-  async remove(id: string): Promise<void> {
-    const deleted = await this.colaboradorRepository.delete(id);
-    if (!deleted) {
+  async remove(id: string, tenantId: string): Promise<void> {
+    const current = await this.colaboradorRepository.findById(id);
+    if (!current || current.empresaId !== tenantId) {
       throw new NotFoundError(`Colaborador com id "${id}" não encontrado.`);
     }
+    await this.colaboradorRepository.delete(id);
   }
 
   private async ensureEmpresaExists(empresaId: string): Promise<void> {

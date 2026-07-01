@@ -1,4 +1,4 @@
-import { ping } from '../database/pool.js';
+import { ping } from '../infrastructure/database/prisma.js';
 
 export interface HealthStatus {
   status: 'ok' | 'degraded';

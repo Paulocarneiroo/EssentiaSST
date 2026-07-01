@@ -6,7 +6,7 @@
 
 ## 1. Sobre o projeto
 
-O **EssentiaSST** será um software web em nuvem, modular e escalável, voltado para a Gestão de Segurança e Saúde no Trabalho (SST) de empresas brasileiras, com ênfase em micro, pequenas e médias empresas (MPMEs). A plataforma reúne, em módulos independentes, as principais rotinas exigidas pela legislação trabalhista (NRs, ISO 45001, eSocial-SST) e propõe um modelo de contratação *pague pelo que usar*, com interface centrada no usuário.
+O **EssentiaSST** será um software web, modular e escalável, voltado para a Gestão de Segurança e Saúde no Trabalho (SST) de empresas brasileiras, com ênfase em micro, pequenas e médias empresas (MPMEs). A plataforma reúne, em módulos independentes, as principais rotinas exigidas pela legislação trabalhista (NRs, ISO 45001, eSocial-SST) e propõe um modelo de contratação *pague pelo que usar*, com interface centrada no usuário.
 
 O projeto compõe a avaliação da disciplina de **Programação Web**, sob ministração do Prof. Rodrigo Alves Costa.
 

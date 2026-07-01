@@ -27,3 +27,15 @@ export class ConflictError extends AppError {
     super(message, 409, 'Conflict');
   }
 }
+
+export class UnauthorizedError extends AppError {
+  constructor(message: string) {
+    super(message, 401, 'Unauthorized');
+  }
+}
+
+export class ForbiddenError extends AppError {
+  constructor(message: string) {
+    super(message, 403, 'Forbidden');
+  }
+}

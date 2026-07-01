@@ -78,8 +78,8 @@ const colaboradorSchema: OpenAPIV3.SchemaObject = {
 
 const createColaboradorSchema: OpenAPIV3.SchemaObject = {
   type: 'object',
+  description: 'A empresa é sempre o tenant do usuário autenticado (derivada do token JWT).',
   properties: {
-    empresaId: { type: 'string', format: 'uuid' },
     cpf: { type: 'string', example: '12345678901' },
     nome: { type: 'string', example: 'Maria Silva' },
     dataNascimento: { type: 'string', format: 'date', example: '1990-05-15' },
@@ -87,13 +87,13 @@ const createColaboradorSchema: OpenAPIV3.SchemaObject = {
     dataAdmissao: { type: 'string', format: 'date', example: '2024-01-10' },
     dataDemissao: { type: 'string', format: 'date', nullable: true },
   },
-  required: ['empresaId', 'cpf', 'nome', 'dataNascimento', 'cargo', 'dataAdmissao'],
+  required: ['cpf', 'nome', 'dataNascimento', 'cargo', 'dataAdmissao'],
 };
 
 const updateColaboradorSchema: OpenAPIV3.SchemaObject = {
   type: 'object',
+  description: 'Não é possível mover o colaborador para outra empresa.',
   properties: {
-    empresaId: { type: 'string', format: 'uuid' },
     cpf: { type: 'string' },
     nome: { type: 'string' },
     dataNascimento: { type: 'string', format: 'date' },
@@ -112,6 +112,57 @@ const healthSchema: OpenAPIV3.SchemaObject = {
     timestamp: { type: 'string', format: 'date-time' },
   },
   required: ['status', 'uptime', 'database', 'timestamp'],
+};
+
+const usuarioSchema: OpenAPIV3.SchemaObject = {
+  type: 'object',
+  properties: {
+    id: { type: 'string', format: 'uuid' },
+    empresaId: { type: 'string', format: 'uuid' },
+    nome: { type: 'string', example: 'Paulo Carneiro' },
+    email: { type: 'string', format: 'email', example: 'admin@exemplo.com' },
+    papel: { type: 'string', enum: ['ADMIN', 'OPERADOR'], example: 'ADMIN' },
+    createdAt: { type: 'string', format: 'date-time' },
+    updatedAt: { type: 'string', format: 'date-time' },
+  },
+  required: ['id', 'empresaId', 'nome', 'email', 'papel', 'createdAt', 'updatedAt'],
+};
+
+const registerSchema: OpenAPIV3.SchemaObject = {
+  type: 'object',
+  properties: {
+    empresaId: { type: 'string', format: 'uuid' },
+    nome: { type: 'string', example: 'Paulo Carneiro' },
+    email: { type: 'string', format: 'email', example: 'admin@exemplo.com' },
+    senha: { type: 'string', format: 'password', minLength: 6, example: 'senha123' },
+    papel: { type: 'string', enum: ['ADMIN', 'OPERADOR'], example: 'ADMIN' },
+  },
+  required: ['empresaId', 'nome', 'email', 'senha'],
+};
+
+const loginSchema: OpenAPIV3.SchemaObject = {
+  type: 'object',
+  properties: {
+    email: { type: 'string', format: 'email', example: 'admin@exemplo.com' },
+    senha: { type: 'string', format: 'password', example: 'senha123' },
+  },
+  required: ['email', 'senha'],
+};
+
+const authResultSchema: OpenAPIV3.SchemaObject = {
+  type: 'object',
+  properties: {
+    token: { type: 'string', description: 'JWT a ser enviado em Authorization: Bearer <token>.' },
+    usuario: usuarioSchema,
+  },
+  required: ['token', 'usuario'],
+};
+
+const bearerAuth: OpenAPIV3.SecurityRequirementObject[] = [{ bearerAuth: [] }];
+
+const unauthorizedResponse: OpenAPIV3.ResponseObject = {
+  description: 'Não autenticado (token ausente, inválido ou expirado).',
+  content: { 'application/json': { schema: errorSchema } },
 };
 
 const uuidParam: OpenAPIV3.ParameterObject = {
@@ -133,15 +184,100 @@ export const openApiSpec: OpenAPIV3.Document = {
   servers: [{ url: '/api', description: 'API base path' }],
   tags: [
     { name: 'Health', description: 'Verificação de saúde da API e do banco.' },
+    { name: 'Auth', description: 'Autenticação de usuários via JWT.' },
     { name: 'Empresas', description: 'CRUD de empresas (tenants).' },
     { name: 'Colaboradores', description: 'CRUD de colaboradores vinculados a empresas.' },
   ],
+  components: {
+    securitySchemes: {
+      bearerAuth: {
+        type: 'http',
+        scheme: 'bearer',
+        bearerFormat: 'JWT',
+        description: 'Informe o token retornado por /auth/login ou /auth/register.',
+      },
+    },
+  },
+  // Segurança padrão para toda a API; rotas públicas sobrescrevem com `security: []`.
+  security: bearerAuth,
   paths: {
+    '/auth/register': {
+      post: {
+        tags: ['Auth'],
+        summary: 'Registrar usuário',
+        description: 'Cria um usuário vinculado a uma empresa existente e retorna um JWT.',
+        security: [],
+        requestBody: {
+          required: true,
+          content: { 'application/json': { schema: registerSchema } },
+        },
+        responses: {
+          '201': {
+            description: 'Usuário criado.',
+            content: { 'application/json': { schema: authResultSchema } },
+          },
+          '400': {
+            description: 'Dados inválidos.',
+            content: { 'application/json': { schema: errorSchema } },
+          },
+          '404': {
+            description: 'Empresa não encontrada.',
+            content: { 'application/json': { schema: errorSchema } },
+          },
+          '409': {
+            description: 'E-mail já cadastrado.',
+            content: { 'application/json': { schema: errorSchema } },
+          },
+        },
+      },
+    },
+    '/auth/login': {
+      post: {
+        tags: ['Auth'],
+        summary: 'Login',
+        description: 'Autentica por e-mail e senha e retorna um JWT.',
+        security: [],
+        requestBody: {
+          required: true,
+          content: { 'application/json': { schema: loginSchema } },
+        },
+        responses: {
+          '200': {
+            description: 'Autenticado.',
+            content: { 'application/json': { schema: authResultSchema } },
+          },
+          '400': {
+            description: 'Dados inválidos.',
+            content: { 'application/json': { schema: errorSchema } },
+          },
+          '401': {
+            description: 'E-mail ou senha inválidos.',
+            content: { 'application/json': { schema: errorSchema } },
+          },
+        },
+      },
+    },
+    '/auth/me': {
+      get: {
+        tags: ['Auth'],
+        summary: 'Usuário autenticado',
+        description: 'Retorna os dados do usuário dono do token.',
+        security: bearerAuth,
+        responses: {
+          '200': {
+            description: 'Dados do usuário.',
+            content: { 'application/json': { schema: usuarioSchema } },
+          },
+          '401': unauthorizedResponse,
+        },
+      },
+    },
     '/health': {
       get: {
         tags: ['Health'],
         summary: 'Health check',
         description: 'Retorna status da API e conectividade com o PostgreSQL.',
+        security: [],
         responses: {
           '200': {
             description: 'API e banco operacionais.',
@@ -158,9 +294,10 @@ export const openApiSpec: OpenAPIV3.Document = {
       get: {
         tags: ['Empresas'],
         summary: 'Listar empresas',
+        description: 'Retorna a empresa do usuário autenticado (o tenant), em formato de lista.',
         responses: {
           '200': {
-            description: 'Lista de empresas.',
+            description: 'Empresa do tenant.',
             content: {
               'application/json': {
                 schema: { type: 'array', items: empresaSchema },
@@ -172,6 +309,8 @@ export const openApiSpec: OpenAPIV3.Document = {
       post: {
         tags: ['Empresas'],
         summary: 'Criar empresa',
+        description: 'Público — permite cadastrar o primeiro tenant antes de existir usuário.',
+        security: [],
         requestBody: {
           required: true,
           content: { 'application/json': { schema: createEmpresaSchema } },
@@ -252,28 +391,17 @@ export const openApiSpec: OpenAPIV3.Document = {
       get: {
         tags: ['Colaboradores'],
         summary: 'Listar colaboradores',
-        parameters: [
-          {
-            name: 'empresaId',
-            in: 'query',
-            required: false,
-            schema: { type: 'string', format: 'uuid' },
-            description: 'Filtra colaboradores de uma empresa específica.',
-          },
-        ],
+        description: 'Retorna apenas os colaboradores da empresa do usuário autenticado.',
         responses: {
           '200': {
-            description: 'Lista de colaboradores.',
+            description: 'Lista de colaboradores do tenant.',
             content: {
               'application/json': {
                 schema: { type: 'array', items: colaboradorSchema },
               },
             },
           },
-          '404': {
-            description: 'Empresa do filtro não encontrada.',
-            content: { 'application/json': { schema: errorSchema } },
-          },
+          '401': unauthorizedResponse,
         },
       },
       post: {

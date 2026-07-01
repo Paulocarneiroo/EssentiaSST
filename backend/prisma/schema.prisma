@@ -1,0 +1,74 @@
+// EssentiaSST — schema Prisma
+// Módulo 1: Cadastro de Empresas e Colaboradores.
+// Modelos mapeados para as tabelas/colunas snake_case do PostgreSQL.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+/// Empresa é o tenant (cliente contratante) — raiz do agregado.
+model Empresa {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  cnpj         String    @unique @db.VarChar(14)
+  razaoSocial  String    @map("razao_social") @db.VarChar(255)
+  nomeFantasia String    @map("nome_fantasia") @db.VarChar(255)
+  cnae         String    @db.VarChar(10)
+  grauRisco    Int       @map("grau_risco")
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  colaboradores Colaborador[]
+  usuarios      Usuario[]
+
+  @@map("empresas")
+}
+
+/// Papel do usuário dentro do tenant (empresa).
+enum PapelUsuario {
+  ADMIN
+  OPERADOR
+
+  @@map("papel_usuario")
+}
+
+/// Usuário que autentica na plataforma; pertence a uma Empresa (tenant).
+model Usuario {
+  id        String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  empresaId String       @map("empresa_id") @db.Uuid
+  nome      String       @db.VarChar(255)
+  email     String       @unique @db.VarChar(255)
+  senhaHash String       @map("senha_hash") @db.VarChar(255)
+  papel     PapelUsuario @default(OPERADOR)
+  createdAt DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime     @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  empresa Empresa @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+
+  @@index([empresaId])
+  @@map("usuarios")
+}
+
+/// Colaborador vinculado a uma Empresa (composição: existe apenas dentro dela).
+model Colaborador {
+  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  empresaId      String    @map("empresa_id") @db.Uuid
+  cpf            String    @db.VarChar(11)
+  nome           String    @db.VarChar(255)
+  dataNascimento DateTime  @map("data_nascimento") @db.Date
+  cargo          String    @db.VarChar(255)
+  dataAdmissao   DateTime  @map("data_admissao") @db.Date
+  dataDemissao   DateTime? @map("data_demissao") @db.Date
+  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  empresa Empresa @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+
+  @@unique([empresaId, cpf])
+  @@index([empresaId])
+  @@map("colaboradores")
+}

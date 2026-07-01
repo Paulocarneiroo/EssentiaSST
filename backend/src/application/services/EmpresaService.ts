@@ -6,11 +6,14 @@ import type { IEmpresaRepository } from '../ports/IEmpresaRepository.js';
 export class EmpresaService {
   constructor(private readonly repository: IEmpresaRepository) {}
 
-  async list(): Promise<Empresa[]> {
-    return this.repository.findAll();
+  /** Lista escopada ao tenant: um usuário só enxerga a própria empresa. */
+  async list(tenantId: string): Promise<Empresa[]> {
+    const empresa = await this.repository.findById(tenantId);
+    return empresa ? [empresa] : [];
   }
 
-  async getById(id: string): Promise<Empresa> {
+  async getById(id: string, tenantId: string): Promise<Empresa> {
+    this.assertSameTenant(id, tenantId);
     const empresa = await this.repository.findById(id);
     if (!empresa) {
       throw new NotFoundError(`Empresa com id "${id}" não encontrada.`);
@@ -18,6 +21,7 @@ export class EmpresaService {
     return empresa;
   }
 
+  /** Público — usado no bootstrap do primeiro tenant, sem contexto de usuário. */
   async create(raw: CreateEmpresaData): Promise<Empresa> {
     const data = validateCreateEmpresa(raw);
     const existing = await this.repository.findByCnpj(data.cnpj);
@@ -27,7 +31,8 @@ export class EmpresaService {
     return this.repository.create(data);
   }
 
-  async update(id: string, raw: UpdateEmpresaData): Promise<Empresa> {
+  async update(id: string, raw: UpdateEmpresaData, tenantId: string): Promise<Empresa> {
+    this.assertSameTenant(id, tenantId);
     const data = validateUpdateEmpresa(raw);
     if (Object.keys(data).length === 0) {
       throw new ValidationError('Informe ao menos um campo para atualização.');
@@ -52,9 +57,17 @@ export class EmpresaService {
     return updated;
   }
 
-  async remove(id: string): Promise<void> {
+  async remove(id: string, tenantId: string): Promise<void> {
+    this.assertSameTenant(id, tenantId);
     const deleted = await this.repository.delete(id);
     if (!deleted) {
+      throw new NotFoundError(`Empresa com id "${id}" não encontrada.`);
+    }
+  }
+
+  /** Garante que o recurso alvo é a própria empresa do usuário; caso contrário, 404 (não vaza existência). */
+  private assertSameTenant(id: string, tenantId: string): void {
+    if (id !== tenantId) {
       throw new NotFoundError(`Empresa com id "${id}" não encontrada.`);
     }
   }
