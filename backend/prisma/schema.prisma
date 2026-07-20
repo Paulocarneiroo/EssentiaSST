@@ -24,6 +24,8 @@ model Empresa {
 
   colaboradores Colaborador[]
   usuarios      Usuario[]
+  riscos        Risco[]
+  eventos       EventoESocial[]
 
   @@map("empresas")
 }
@@ -66,9 +68,135 @@ model Colaborador {
   createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt      DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  empresa Empresa @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  empresa Empresa           @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  asos    Aso[]
+  eventos EventoESocial[]
 
   @@unique([empresaId, cpf])
   @@index([empresaId])
   @@map("colaboradores")
+}
+
+// ---------------------------------------------------------------------------
+// Módulo 3: ASO, Risco e Mensageria eSocial.
+// ---------------------------------------------------------------------------
+
+enum TipoExame {
+  ADMISSIONAL
+  PERIODICO
+  RETORNO_TRABALHO
+  MUDANCA_RISCO
+  DEMISSIONAL
+
+  @@map("tipo_exame")
+}
+
+enum ResultadoAso {
+  APTO
+  INAPTO
+  APTO_COM_RESTRICOES
+
+  @@map("resultado_aso")
+}
+
+/// Atestado de Saúde Ocupacional — composição com Colaborador (não existe sem ele).
+model Aso {
+  id            String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  colaboradorId String       @map("colaborador_id") @db.Uuid
+  tipoExame     TipoExame    @map("tipo_exame")
+  dataExame     DateTime     @map("data_exame") @db.Date
+  resultado     ResultadoAso
+  medico        String       @db.VarChar(255)
+  crm           String       @db.VarChar(20)
+  createdAt     DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime     @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  colaborador Colaborador     @relation(fields: [colaboradorId], references: [id], onDelete: Cascade)
+  eventos     EventoESocial[]
+
+  @@index([colaboradorId])
+  @@map("asos")
+}
+
+enum TipoRisco {
+  FISICO
+  QUIMICO
+  BIOLOGICO
+  ERGONOMICO
+  ACIDENTE
+
+  @@map("tipo_risco")
+}
+
+/// Risco ocupacional catalogado no PGR — agregação com Empresa.
+model Risco {
+  id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  empresaId     String    @map("empresa_id") @db.Uuid
+  descricao     String    @db.VarChar(500)
+  tipo          TipoRisco
+  severidade    Int
+  probabilidade Int
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  empresa Empresa         @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  eventos EventoESocial[]
+
+  @@index([empresaId])
+  @@map("riscos")
+}
+
+enum TipoEventoESocial {
+  S_2210
+  S_2220
+  S_2240
+
+  @@map("tipo_evento_esocial")
+}
+
+enum StatusEventoESocial {
+  PENDENTE
+  ENVIADO
+  ACEITO
+  REJEITADO
+
+  @@map("status_evento_esocial")
+}
+
+/// Ambiente de destino conforme o campo `tpAmb` do leiaute eSocial.
+enum AmbienteESocial {
+  PRODUCAO
+  PRODUCAO_RESTRITA
+
+  @@map("ambiente_esocial")
+}
+
+/// Mensagem XML enviada ao eSocial. Guarda apenas estado — não monta nem envia (SRP).
+model EventoESocial {
+  id            String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  empresaId     String              @map("empresa_id") @db.Uuid
+  colaboradorId String?             @map("colaborador_id") @db.Uuid
+  asoId         String?             @map("aso_id") @db.Uuid
+  riscoId       String?             @map("risco_id") @db.Uuid
+  tipoEvento    TipoEventoESocial   @map("tipo_evento")
+  payloadXml    String              @map("payload_xml")
+  status        StatusEventoESocial @default(PENDENTE)
+  ambiente      AmbienteESocial
+  protocolo     String?             @db.VarChar(60)
+  mensagemErro  String?             @map("mensagem_erro")
+  dataEnvio     DateTime?           @map("data_envio") @db.Timestamptz(6)
+  tentativas    Int                 @default(0)
+  createdAt     DateTime            @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime            @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  empresa     Empresa      @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  colaborador Colaborador? @relation(fields: [colaboradorId], references: [id], onDelete: SetNull)
+  aso         Aso?         @relation(fields: [asoId], references: [id], onDelete: SetNull)
+  risco       Risco?       @relation(fields: [riscoId], references: [id], onDelete: SetNull)
+
+  @@index([empresaId])
+  @@index([empresaId, status])
+  @@index([asoId])
+  @@index([riscoId])
+  @@map("eventos_esocial")
 }

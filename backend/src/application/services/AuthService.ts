@@ -1,6 +1,7 @@
 import type {
   AuthResult,
   LoginData,
+  Papel,
   PublicUsuario,
   RegisterData,
   Usuario,
@@ -34,9 +35,34 @@ export class AuthService {
     private readonly tokenService: ITokenService,
   ) {}
 
-  async register(raw: RegisterData): Promise<AuthResult> {
-    const data = validateRegister(raw);
+  /**
+   * Registro feito por um ADMIN autenticado: o usuário nasce sempre no tenant
+   * de quem registra, independentemente do `empresaId` enviado no corpo.
+   */
+  async register(raw: RegisterData, tenantId: string): Promise<AuthResult> {
+    const data = validateRegister({ ...raw, empresaId: tenantId });
+    return this.createUsuario(data);
+  }
 
+  /**
+   * Bootstrap público: cria o primeiro ADMIN de uma empresa recém-cadastrada.
+   * Só é permitido enquanto a empresa não tem nenhum usuário — a partir daí,
+   * novos usuários passam obrigatoriamente por `register` (ADMIN autenticado).
+   */
+  async bootstrap(raw: RegisterData): Promise<AuthResult> {
+    const data = validateRegister({ ...raw, papel: 'ADMIN' });
+
+    const usuariosExistentes = await this.usuarioRepository.countByEmpresa(data.empresaId);
+    if (usuariosExistentes > 0) {
+      throw new ConflictError(
+        'Esta empresa já possui usuários. Peça a um administrador para registrar o seu acesso.',
+      );
+    }
+
+    return this.createUsuario(data);
+  }
+
+  private async createUsuario(data: Required<Omit<RegisterData, 'papel'>> & { papel: Papel }): Promise<AuthResult> {
     const empresa = await this.empresaRepository.findById(data.empresaId);
     if (!empresa) {
       throw new NotFoundError(`Empresa com id "${data.empresaId}" não encontrada.`);

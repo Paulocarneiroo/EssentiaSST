@@ -3,5 +3,6 @@ import type { CreateUsuarioData, Usuario } from '../../domain/entities/Usuario.j
 export interface IUsuarioRepository {
   findById(id: string): Promise<Usuario | null>;
   findByEmail(email: string): Promise<Usuario | null>;
+  countByEmpresa(empresaId: string): Promise<number>;
   create(data: CreateUsuarioData): Promise<Usuario>;
 }

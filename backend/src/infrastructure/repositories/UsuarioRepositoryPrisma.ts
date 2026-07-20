@@ -25,6 +25,10 @@ export class UsuarioRepositoryPrisma implements IUsuarioRepository {
     return row ? toUsuario(row) : null;
   }
 
+  async countByEmpresa(empresaId: string): Promise<number> {
+    return prisma.usuario.count({ where: { empresaId } });
+  }
+
   async create(data: CreateUsuarioData): Promise<Usuario> {
     const row = await prisma.usuario.create({
       data: {

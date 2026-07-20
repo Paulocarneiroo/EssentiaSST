@@ -15,7 +15,8 @@
     "typecheck": "tsc --noEmit",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
-    "db:push": "prisma db push",
+    "db:migrate": "prisma migrate deploy",
+    "db:status": "prisma migrate status",
     "db:studio": "prisma studio"
   },
   "engines": {

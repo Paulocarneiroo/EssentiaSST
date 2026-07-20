@@ -21,12 +21,59 @@ export interface JwtConfig {
   expiresIn: string;
 }
 
+export type AmbienteESocialConfig = 'PRODUCAO' | 'PRODUCAO_RESTRITA';
+export type ClienteESocialConfig = 'sandbox' | 'govbr';
+
+export interface ESocialConfig {
+  /** Destino do envio (`tpAmb`): produção ou produção restrita (homologação). */
+  ambiente: AmbienteESocialConfig;
+  /** Implementação de `IClienteESocial` a injetar. */
+  cliente: ClienteESocialConfig;
+  /** Proporção de rejeições simuladas pelo sandbox, entre 0 e 1. */
+  taxaRejeicaoSandbox: number;
+}
+
 export interface AppEnv {
   nodeEnv: string;
   port: number;
   db: DatabaseConfig;
   jwt: JwtConfig;
+  esocial: ESocialConfig;
 }
+
+const parseAmbiente = (value: string | undefined): AmbienteESocialConfig => {
+  if (value === undefined || value === '') {
+    // Padrão seguro: nunca gerar obrigação real sem escolha explícita (H3.5).
+    return 'PRODUCAO_RESTRITA';
+  }
+  if (value !== 'PRODUCAO' && value !== 'PRODUCAO_RESTRITA') {
+    throw new Error(
+      `ESOCIAL_AMBIENTE inválido: "${value}". Use PRODUCAO ou PRODUCAO_RESTRITA.`,
+    );
+  }
+  return value;
+};
+
+const parseCliente = (value: string | undefined): ClienteESocialConfig => {
+  if (value === undefined || value === '') {
+    return 'sandbox';
+  }
+  if (value !== 'sandbox' && value !== 'govbr') {
+    throw new Error(`ESOCIAL_CLIENTE inválido: "${value}". Use sandbox ou govbr.`);
+  }
+  return value;
+};
+
+const parseTaxa = (value: string | undefined): number => {
+  if (value === undefined || value === '') {
+    return 0;
+  }
+  const taxa = Number(value);
+  if (!Number.isFinite(taxa) || taxa < 0 || taxa > 1) {
+    throw new Error(`ESOCIAL_TAXA_REJEICAO inválida: "${value}". Use um número entre 0 e 1.`);
+  }
+  return taxa;
+};
 
 export const env: AppEnv = {
   nodeEnv: process.env.NODE_ENV ?? 'development',
@@ -43,5 +90,11 @@ export const env: AppEnv = {
   jwt: {
     secret: process.env.JWT_SECRET ?? 'dev-secret',
     expiresIn: process.env.JWT_EXPIRES_IN ?? '1d',
+  },
+
+  esocial: {
+    ambiente: parseAmbiente(process.env.ESOCIAL_AMBIENTE),
+    cliente: parseCliente(process.env.ESOCIAL_CLIENTE),
+    taxaRejeicaoSandbox: parseTaxa(process.env.ESOCIAL_TAXA_REJEICAO),
   },
 };

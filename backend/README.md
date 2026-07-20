@@ -74,9 +74,23 @@ cp .env.example .env
 # 4. Subir o banco PostgreSQL
 docker compose up -d
 
-# 5. Iniciar a API em modo desenvolvimento
+# 5. Aplicar as migrations
+npm run db:migrate
+
+# 6. Iniciar a API em modo desenvolvimento
 npm run dev
 ```
+
+> **Banco já existente criado com `prisma db push`?** Antes do passo 5, marque a
+> migration de baseline como já aplicada — ela descreve o estado que o banco já
+> tem, e reexecutá-la falharia:
+>
+> ```bash
+> npx prisma migrate resolve --applied 20260720000000_init
+> npm run db:migrate   # aplica apenas 20260720000100_modulo3_esocial
+> ```
+>
+> Em um banco vazio isso não é necessário: `db:migrate` aplica as duas em ordem.
 
 A API ficará disponível em `http://localhost:3000`.
 
@@ -118,6 +132,25 @@ Resposta esperada:
 | `npm run typecheck` | Verifica tipos sem emitir arquivos (`tsc --noEmit`).             |
 | `npm run lint`      | Executa o ESLint em `src/**/*.ts`.                               |
 | `npm run format`    | Formata o código TypeScript com Prettier.                        |
+| `npm run db:migrate`| Aplica as migrations pendentes (`prisma migrate deploy`).        |
+| `npm run db:status` | Mostra quais migrations já foram aplicadas.                      |
+| `npm run prisma:migrate` | Cria uma nova migration a partir do schema (exige banco).   |
+
+---
+
+## Migrations
+
+O schema é versionado em `prisma/migrations/`:
+
+| Migration                        | Conteúdo                                          |
+|----------------------------------|---------------------------------------------------|
+| `20260720000000_init`            | Baseline: `empresas`, `usuarios`, `colaboradores` |
+| `20260720000100_modulo3_esocial` | `asos`, `riscos`, `eventos_esocial` e seus enums  |
+
+`prisma db push` não é mais usado: ele altera o banco sem deixar histórico, o que
+faz o estado depender de quem rodou o quê. Para criar uma migration nova, edite
+`prisma/schema.prisma` e rode `npm run prisma:migrate -- --name descricao-curta`
+**na máquina que tem o banco**.
 
 ---
 
@@ -134,6 +167,9 @@ Resposta esperada:
 | `DB_PASSWORD`    | Senha do banco.                            | —                  |
 | `JWT_SECRET`     | Segredo para assinatura de tokens JWT.     | —                  |
 | `JWT_EXPIRES_IN` | Duração do token.                          | `1d`               |
+| `ESOCIAL_AMBIENTE` | `PRODUCAO` ou `PRODUCAO_RESTRITA` (campo `tpAmb`). | `PRODUCAO_RESTRITA` |
+| `ESOCIAL_CLIENTE`  | `sandbox` (simulador local) ou `govbr`.  | `sandbox`          |
+| `ESOCIAL_TAXA_REJEICAO` | Proporção de rejeições simuladas (0 a 1). | `0`           |
 
 ---
 
@@ -206,13 +242,79 @@ docker compose down -v         # parar e apagar o volume
 }
 ```
 
-As migrations são aplicadas automaticamente na subida da API.
+### ASO (`/api/asos`)
+
+| Método   | Rota     | Descrição                                        |
+|----------|----------|--------------------------------------------------|
+| `GET`    | `/`      | Lista ASOs do tenant (`?colaboradorId=` opcional)|
+| `GET`    | `/:id`   | Busca por id                                     |
+| `POST`   | `/`      | Registra ASO                                     |
+| `PUT`    | `/:id`   | Atualiza ASO                                     |
+| `DELETE` | `/:id`   | Remove ASO (**ADMIN**)                           |
+
+### Riscos (`/api/riscos`)
+
+| Método   | Rota     | Descrição                          |
+|----------|----------|------------------------------------|
+| `GET`    | `/`      | Lista riscos do PGR do tenant      |
+| `GET`    | `/:id`   | Busca por id                       |
+| `POST`   | `/`      | Cadastra risco                     |
+| `PUT`    | `/:id`   | Atualiza risco                     |
+| `DELETE` | `/:id`   | Remove risco (**ADMIN**)           |
+
+---
+
+## Mensageria eSocial (`/api/eventos-esocial`)
+
+| Método | Rota             | Descrição                                             |
+|--------|------------------|-------------------------------------------------------|
+| `GET`  | `/`              | Lista eventos do tenant                               |
+| `GET`  | `/:id`           | Busca evento por id                                   |
+| `GET`  | `/:id/xml`       | Baixa o payload XML (`application/xml`)               |
+| `POST` | `/aso`           | Gera **S-2220** a partir de um ASO                    |
+| `POST` | `/risco`         | Gera **S-2240** a partir de um risco + colaborador    |
+| `POST` | `/:id/enviar`    | Transmite ao eSocial (**ADMIN**)                      |
+| `POST` | `/:id/reenviar`  | Reenvia evento `REJEITADO` (**ADMIN**)                |
+
+### Ciclo de vida do evento
+
+```
+PENDENTE ──enviar──► ENVIADO ──┬──► ACEITO      (registra protocolo)
+    ▲                          └──► REJEITADO   (registra mensagem de erro)
+    └────────────── reenviar ────────┘
+```
+
+`ACEITO` é terminal. Somente `REJEITADO` admite reenvio, que remonta o XML a
+partir do fato de origem já corrigido e preserva o vínculo do evento original.
+
+### Arquitetura (DIP)
+
+| Abstração          | Implementações                                                        |
+|--------------------|-----------------------------------------------------------------------|
+| `IValidadorSchema` | `ValidadorSchemaS12` (validação estrutural do leiaute S-1.2)          |
+| `IClienteESocial`  | `ClienteESocialSandbox` (simulador), `ClienteWSeSocialGovBr` (*stub*) |
+
+`MontadorXMLeSocial` monta e valida o XML; `ServicoEnvioESocial` cuida do ciclo
+de vida e do transporte. Trocar o destino do envio é questão de configuração
+(`ESOCIAL_CLIENTE`), sem tocar em regra de negócio.
+
+### Limitações conhecidas
+
+- **Sem transmissão real.** `ClienteWSeSocialGovBr` lança erro: falta certificado
+  ICP-Brasil, assinatura XMLDSig e o fluxo de lote (`EnviarLoteEventos` /
+  `ConsultarLoteEventos`). O sandbox simula o retorno de forma determinística.
+- **Validação estrutural, não XSD oficial.** Cobre elementos obrigatórios,
+  ordem, cardinalidade e formatos; não substitui a homologação oficial.
+- **S-2210 (CAT) não implementado** — depende de uma entidade de Comunicação de
+  Acidente de Trabalho que ainda não existe no domínio.
+- **Códigos da Tabela 24** em `COD_AGENTE_NOCIVO` são representativos por
+  categoria de risco, não o código específico do agente.
 
 ---
 
 ## Próximas etapas
 
-- CRUD de ASO, Risco e EventoESocial.
-- Implementação das demais interfaces (`IRepositorioASO`, `IClienteESocial`, etc.) seguindo DIP.
-- Autenticação JWT e multi-tenancy.
-- Mensageria eSocial (eventos S-2210, S-2220, S-2240).
+- Entidade CAT e evento S-2210.
+- Campo `matricula` próprio em `Colaborador` (hoje derivado do UUID).
+- `AptidaoService` e `GeradorRelatorioPGR` (PGR em PDF).
+- Migrations versionadas (`prisma migrate`) no lugar de `db push`.

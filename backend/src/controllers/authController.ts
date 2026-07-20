@@ -2,11 +2,22 @@ import type { RequestHandler } from 'express';
 import type { LoginData, RegisterData } from '../domain/entities/Usuario.js';
 import { UnauthorizedError } from '../domain/errors/AppError.js';
 import { authService } from '../infrastructure/di/container.js';
+import { getTenantId } from '../utils/tenant.js';
 
 export const register: RequestHandler = async (req, res, next) => {
   try {
     const body = req.body as RegisterData;
-    const result = await authService.register(body);
+    const result = await authService.register(body, getTenantId(req));
+    res.status(201).json(result);
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const bootstrap: RequestHandler = async (req, res, next) => {
+  try {
+    const body = req.body as RegisterData;
+    const result = await authService.bootstrap(body);
     res.status(201).json(result);
   } catch (error) {
     next(error);

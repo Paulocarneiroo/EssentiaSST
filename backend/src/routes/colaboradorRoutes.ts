@@ -6,17 +6,20 @@ import {
   listColaboradores,
   updateColaborador,
 } from '../controllers/colaboradorController.js';
-import { authenticate } from '../middlewares/authMiddleware.js';
+import { authenticate, authorize } from '../middlewares/authMiddleware.js';
 
 const router = Router();
 
 // Todas as rotas de colaboradores exigem autenticação.
 router.use(authenticate);
 
+// Rotina diária de SST: ADMIN e OPERADOR.
 router.get('/', listColaboradores);
 router.get('/:id', getColaboradorById);
 router.post('/', createColaborador);
 router.put('/:id', updateColaborador);
-router.delete('/:id', deleteColaborador);
+
+// Exclusão apaga o histórico do trabalhador — restrita a ADMIN.
+router.delete('/:id', authorize('ADMIN'), deleteColaborador);
 
 export default router;
