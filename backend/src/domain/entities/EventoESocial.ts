@@ -15,6 +15,7 @@ export interface EventoESocial {
   colaboradorId: string | null;
   asoId: string | null;
   riscoId: string | null;
+  acidenteId: string | null;
   tipoEvento: TipoEventoESocial;
   payloadXml: string;
   status: StatusEventoESocial;
@@ -32,6 +33,7 @@ export interface CreateEventoESocialData {
   colaboradorId: string | null;
   asoId: string | null;
   riscoId: string | null;
+  acidenteId: string | null;
   tipoEvento: TipoEventoESocial;
   payloadXml: string;
   ambiente: AmbienteESocial;

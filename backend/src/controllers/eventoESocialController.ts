@@ -45,6 +45,19 @@ export const gerarDeAso: RequestHandler = async (req, res, next) => {
   }
 };
 
+export const gerarDeAcidente: RequestHandler = async (req, res, next) => {
+  try {
+    const { acidenteId } = req.body as { acidenteId?: string };
+    if (!acidenteId?.trim()) {
+      throw new ValidationError('acidenteId é obrigatório.');
+    }
+    const evento = await servicoEnvioESocial.gerarDeAcidente(acidenteId.trim(), getTenantId(req));
+    res.status(201).json(evento);
+  } catch (error) {
+    next(error);
+  }
+};
+
 export const gerarDeRisco: RequestHandler = async (req, res, next) => {
   try {
     const { riscoId, colaboradorId } = req.body as { riscoId?: string; colaboradorId?: string };

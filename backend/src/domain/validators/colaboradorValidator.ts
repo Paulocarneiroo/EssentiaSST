@@ -1,9 +1,18 @@
 import { ValidationError } from '../errors/AppError.js';
 import type { CreateColaboradorData, UpdateColaboradorData } from '../entities/Colaborador.js';
+import { isCpfValido, somenteDigitos as onlyDigits } from './documentos.js';
 
 const CPF_LENGTH = 11;
 
-const onlyDigits = (value: string): string => value.replace(/\D/g, '');
+/** Comprimento e dígito verificador: um CPF inválido só seria rejeitado no eSocial. */
+const assertCpf = (cpf: string): void => {
+  if (cpf.length !== CPF_LENGTH) {
+    throw new ValidationError('CPF deve conter exatamente 11 dígitos.');
+  }
+  if (!isCpfValido(cpf)) {
+    throw new ValidationError('CPF inválido: o dígito verificador não confere.');
+  }
+};
 
 const parseDate = (value: string, fieldName: string): Date => {
   const date = new Date(value);
@@ -20,9 +29,7 @@ export const validateCreateColaborador = (data: CreateColaboradorData): CreateCo
     throw new ValidationError('empresaId é obrigatório.');
   }
   const cpf = normalizeCpf(data.cpf);
-  if (cpf.length !== CPF_LENGTH) {
-    throw new ValidationError('CPF deve conter exatamente 11 dígitos.');
-  }
+  assertCpf(cpf);
   if (!data.nome?.trim()) {
     throw new ValidationError('Nome é obrigatório.');
   }
@@ -53,9 +60,7 @@ export const validateUpdateColaborador = (data: UpdateColaboradorData): UpdateCo
   }
   if (data.cpf !== undefined) {
     const cpf = normalizeCpf(data.cpf);
-    if (cpf.length !== CPF_LENGTH) {
-      throw new ValidationError('CPF deve conter exatamente 11 dígitos.');
-    }
+    assertCpf(cpf);
     result.cpf = cpf;
   }
   if (data.nome !== undefined && !data.nome.trim()) {

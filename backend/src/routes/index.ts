@@ -1,10 +1,12 @@
 import { Router } from 'express';
+import acidenteRoutes from './acidenteRoutes.js';
 import asoRoutes from './asoRoutes.js';
 import authRoutes from './authRoutes.js';
 import colaboradorRoutes from './colaboradorRoutes.js';
 import empresaRoutes from './empresaRoutes.js';
 import eventoESocialRoutes from './eventoESocialRoutes.js';
 import healthRoutes from './healthRoutes.js';
+import relatorioRoutes from './relatorioRoutes.js';
 import riscoRoutes from './riscoRoutes.js';
 
 const router = Router();
@@ -14,7 +16,9 @@ router.use('/auth', authRoutes);
 router.use('/empresas', empresaRoutes);
 router.use('/colaboradores', colaboradorRoutes);
 router.use('/asos', asoRoutes);
+router.use('/acidentes', acidenteRoutes);
 router.use('/riscos', riscoRoutes);
 router.use('/eventos-esocial', eventoESocialRoutes);
+router.use('/relatorios', relatorioRoutes);
 
 export default router;

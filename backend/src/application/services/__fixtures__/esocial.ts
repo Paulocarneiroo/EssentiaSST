@@ -1,3 +1,4 @@
+import type { Acidente } from '../../../domain/entities/Acidente.js';
 import type { Aso } from '../../../domain/entities/Aso.js';
 import type { Colaborador } from '../../../domain/entities/Colaborador.js';
 import type { Empresa } from '../../../domain/entities/Empresa.js';
@@ -7,6 +8,7 @@ import type {
   UpdateEventoESocialData,
 } from '../../../domain/entities/EventoESocial.js';
 import type { Risco } from '../../../domain/entities/Risco.js';
+import type { IAcidenteRepository } from '../../ports/IAcidenteRepository.js';
 import type { IAsoRepository } from '../../ports/IAsoRepository.js';
 import type { IColaboradorRepository } from '../../ports/IColaboradorRepository.js';
 import type { IEmpresaRepository } from '../../ports/IEmpresaRepository.js';
@@ -20,7 +22,7 @@ const agora = new Date('2026-03-10T12:00:00.000Z');
 
 export const empresaA: Empresa = {
   id: TENANT_A,
-  cnpj: '12345678000199',
+  cnpj: '11222333000181',
   razaoSocial: 'Empresa Exemplo LTDA',
   nomeFantasia: 'Exemplo SST',
   cnae: '6201500',
@@ -32,7 +34,7 @@ export const empresaA: Empresa = {
 export const colaboradorA: Colaborador = {
   id: '33333333-3333-3333-3333-333333333333',
   empresaId: TENANT_A,
-  cpf: '12345678901',
+  cpf: '12345678909',
   nome: 'Maria Silva',
   dataNascimento: new Date('1990-05-15'),
   cargo: 'Analista de SST',
@@ -65,6 +67,35 @@ export const riscoA: Risco = {
   updatedAt: agora,
 };
 
+export const acidenteA: Acidente = {
+  id: '66666666-6666-6666-6666-666666666666',
+  colaboradorId: colaboradorA.id,
+  dataAcidente: new Date('2026-03-02T00:00:00.000Z'),
+  horaAcidente: '1430',
+  horasTrabalhadasAntes: '0600',
+  tipoAcidente: 'TIPICO',
+  tipoCat: 'INICIAL',
+  obito: false,
+  dataObito: null,
+  comunicadoPolicia: false,
+  localAcidente: 'Setor de produção, linha 2',
+  parteAtingida: 'MAO',
+  agenteCausador: 'MAQUINA',
+  tipoLesao: 'CORTE',
+  descricao: 'Corte na mão direita ao operar a prensa sem proteção de zona.',
+  cid: 'S61.0',
+  dataAtendimento: new Date('2026-03-02T00:00:00.000Z'),
+  horaAtendimento: '1520',
+  houveInternacao: false,
+  houveAfastamento: true,
+  duracaoTratamentoDias: 15,
+  medico: 'Dra. Carla Lima',
+  crm: 'CRM-PE 54321',
+  ufCrm: 'PE',
+  createdAt: agora,
+  updatedAt: agora,
+};
+
 /** Repositórios em memória — exatamente o cenário que o DIP habilita. */
 export class EmpresaRepositoryFake implements Pick<IEmpresaRepository, 'findById'> {
   constructor(private readonly empresas: Empresa[]) {}
@@ -84,6 +115,13 @@ export class AsoRepositoryFake implements Pick<IAsoRepository, 'findById'> {
   constructor(private readonly asos: Aso[]) {}
   async findById(id: string): Promise<Aso | null> {
     return this.asos.find((a) => a.id === id) ?? null;
+  }
+}
+
+export class AcidenteRepositoryFake implements Pick<IAcidenteRepository, 'findById'> {
+  constructor(private readonly acidentes: Acidente[]) {}
+  async findById(id: string): Promise<Acidente | null> {
+    return this.acidentes.find((a) => a.id === id) ?? null;
   }
 }
 
@@ -114,6 +152,7 @@ export class EventoRepositoryFake implements IEventoESocialRepository {
       colaboradorId: data.colaboradorId,
       asoId: data.asoId,
       riscoId: data.riscoId,
+      acidenteId: data.acidenteId,
       tipoEvento: data.tipoEvento,
       payloadXml: data.payloadXml,
       status: 'PENDENTE',

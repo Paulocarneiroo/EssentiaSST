@@ -9,6 +9,7 @@ import type {
 import { MontadorXMLeSocial } from './MontadorXMLeSocial.js';
 import { ServicoEnvioESocial } from './ServicoEnvioESocial.js';
 import {
+  AcidenteRepositoryFake,
   AsoRepositoryFake,
   ColaboradorRepositoryFake,
   EmpresaRepositoryFake,
@@ -16,6 +17,7 @@ import {
   RiscoRepositoryFake,
   TENANT_A,
   TENANT_B,
+  acidenteA,
   asoA,
   colaboradorA,
   empresaA,
@@ -52,6 +54,7 @@ const montarCenario = (resposta: RespostaESocial = ACEITE) => {
     eventoRepository,
     new AsoRepositoryFake([asoA]),
     new RiscoRepositoryFake([riscoA]),
+    new AcidenteRepositoryFake([acidenteA]),
     new ColaboradorRepositoryFake([colaboradorA]),
     new EmpresaRepositoryFake([empresaA]),
     new MontadorXMLeSocial(new ValidadorSchemaS12()),
@@ -88,10 +91,46 @@ describe('ServicoEnvioESocial — H3.1 (geração)', () => {
     expect(evento.colaboradorId).toBe(colaboradorA.id);
   });
 
+  it('cria o S-2210 vinculado ao acidente de origem', async () => {
+    const { servico } = montarCenario();
+
+    const evento = await servico.gerarDeAcidente(acidenteA.id, TENANT_A);
+
+    expect(evento.status).toBe('PENDENTE');
+    expect(evento.tipoEvento).toBe('S_2210');
+    expect(evento.acidenteId).toBe(acidenteA.id);
+    expect(evento.asoId).toBeNull();
+    expect(evento.riscoId).toBeNull();
+  });
+
   it('não gera evento a partir de ASO de outro tenant (H1.3)', async () => {
     const { servico } = montarCenario();
 
     await expect(servico.gerarDeAso(asoA.id, TENANT_B)).rejects.toThrow(/não encontrado/);
+  });
+
+  it('não gera CAT a partir de acidente de outro tenant (H1.3)', async () => {
+    const { servico } = montarCenario();
+
+    await expect(servico.gerarDeAcidente(acidenteA.id, TENANT_B)).rejects.toThrow(
+      /não encontrado/,
+    );
+  });
+});
+
+describe('ServicoEnvioESocial — H3.4 (reenvio da CAT)', () => {
+  it('remonta o XML do S-2210 a partir do acidente corrigido', async () => {
+    const { servico, cliente } = montarCenario(REJEICAO);
+    const criado = await servico.gerarDeAcidente(acidenteA.id, TENANT_A);
+    await servico.enviar(criado.id, TENANT_A);
+
+    cliente.responder(ACEITE);
+    const reenviado = await servico.reenviar(criado.id, TENANT_A);
+
+    expect(reenviado.status).toBe('ACEITO');
+    expect(reenviado.acidenteId).toBe(acidenteA.id);
+    expect(reenviado.tentativas).toBe(2);
+    expect(cliente.chamadas.at(-1)?.xml).toContain('evtCAT');
   });
 });
 

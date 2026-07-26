@@ -14,7 +14,7 @@ const empresaSchema: OpenAPIV3.SchemaObject = {
   type: 'object',
   properties: {
     id: { type: 'string', format: 'uuid' },
-    cnpj: { type: 'string', example: '12345678000199' },
+    cnpj: { type: 'string', example: '11222333000181' },
     razaoSocial: { type: 'string', example: 'Empresa Exemplo LTDA' },
     nomeFantasia: { type: 'string', example: 'Exemplo SST' },
     cnae: { type: 'string', example: '6201500' },
@@ -28,7 +28,7 @@ const empresaSchema: OpenAPIV3.SchemaObject = {
 const createEmpresaSchema: OpenAPIV3.SchemaObject = {
   type: 'object',
   properties: {
-    cnpj: { type: 'string', example: '12345678000199' },
+    cnpj: { type: 'string', example: '11222333000181' },
     razaoSocial: { type: 'string', example: 'Empresa Exemplo LTDA' },
     nomeFantasia: { type: 'string', example: 'Exemplo SST' },
     cnae: { type: 'string', example: '6201500' },
@@ -40,7 +40,7 @@ const createEmpresaSchema: OpenAPIV3.SchemaObject = {
 const updateEmpresaSchema: OpenAPIV3.SchemaObject = {
   type: 'object',
   properties: {
-    cnpj: { type: 'string', example: '12345678000199' },
+    cnpj: { type: 'string', example: '11222333000181' },
     razaoSocial: { type: 'string' },
     nomeFantasia: { type: 'string' },
     cnae: { type: 'string' },
@@ -53,7 +53,7 @@ const colaboradorSchema: OpenAPIV3.SchemaObject = {
   properties: {
     id: { type: 'string', format: 'uuid' },
     empresaId: { type: 'string', format: 'uuid' },
-    cpf: { type: 'string', example: '12345678901' },
+    cpf: { type: 'string', example: '12345678909' },
     nome: { type: 'string', example: 'Maria Silva' },
     dataNascimento: { type: 'string', format: 'date' },
     cargo: { type: 'string', example: 'Analista de SST' },
@@ -80,7 +80,7 @@ const createColaboradorSchema: OpenAPIV3.SchemaObject = {
   type: 'object',
   description: 'A empresa é sempre o tenant do usuário autenticado (derivada do token JWT).',
   properties: {
-    cpf: { type: 'string', example: '12345678901' },
+    cpf: { type: 'string', example: '12345678909' },
     nome: { type: 'string', example: 'Maria Silva' },
     dataNascimento: { type: 'string', format: 'date', example: '1990-05-15' },
     cargo: { type: 'string', example: 'Analista de SST' },
@@ -154,6 +154,133 @@ const updateAsoSchema: OpenAPIV3.SchemaObject = {
   },
 };
 
+const TIPOS_ACIDENTE = ['TIPICO', 'DOENCA', 'TRAJETO'];
+const TIPOS_CAT = ['INICIAL', 'REABERTURA', 'COMUNICACAO_OBITO'];
+const PARTES_ATINGIDAS = ['CABECA', 'OLHOS', 'MAO', 'BRACO', 'TRONCO', 'PERNA', 'PE', 'MULTIPLAS'];
+const AGENTES_CAUSADORES = [
+  'MAQUINA',
+  'FERRAMENTA',
+  'QUEDA',
+  'VEICULO',
+  'SUBSTANCIA_QUIMICA',
+  'ELETRICIDADE',
+  'OUTRO',
+];
+const TIPOS_LESAO = [
+  'CORTE',
+  'FRATURA',
+  'QUEIMADURA',
+  'CONTUSAO',
+  'ENTORSE',
+  'INTOXICACAO',
+  'OUTRA',
+];
+
+const camposAcidente: Record<string, OpenAPIV3.SchemaObject> = {
+  dataAcidente: { type: 'string', format: 'date', example: '2026-03-02' },
+  horaAcidente: { type: 'string', example: '1430', description: 'Formato HHMM.' },
+  horasTrabalhadasAntes: {
+    type: 'string',
+    example: '0600',
+    description: 'Horas trabalhadas antes do acidente, formato HHMM.',
+  },
+  tipoAcidente: { type: 'string', enum: TIPOS_ACIDENTE, example: 'TIPICO' },
+  tipoCat: {
+    type: 'string',
+    enum: TIPOS_CAT,
+    description: 'Padrão: INICIAL, ou COMUNICACAO_OBITO quando obito = true.',
+  },
+  obito: { type: 'boolean', default: false },
+  dataObito: {
+    type: 'string',
+    format: 'date',
+    nullable: true,
+    description: 'Obrigatória quando obito = true.',
+  },
+  comunicadoPolicia: { type: 'boolean', default: false },
+  localAcidente: { type: 'string', example: 'Setor de produção, linha 2' },
+  parteAtingida: { type: 'string', enum: PARTES_ATINGIDAS, example: 'MAO' },
+  agenteCausador: { type: 'string', enum: AGENTES_CAUSADORES, example: 'MAQUINA' },
+  tipoLesao: { type: 'string', enum: TIPOS_LESAO, example: 'CORTE' },
+  descricao: { type: 'string', example: 'Corte na mão direita ao operar a prensa.' },
+  cid: { type: 'string', nullable: true, example: 'S61.0', description: 'Formato CID-10.' },
+  dataAtendimento: { type: 'string', format: 'date', example: '2026-03-02' },
+  horaAtendimento: { type: 'string', example: '1520', description: 'Formato HHMM.' },
+  houveInternacao: { type: 'boolean', default: false },
+  houveAfastamento: { type: 'boolean', default: false },
+  duracaoTratamentoDias: { type: 'integer', minimum: 0, example: 15 },
+  medico: { type: 'string', example: 'Dra. Carla Lima' },
+  crm: { type: 'string', example: 'CRM-PE 54321' },
+  ufCrm: { type: 'string', example: 'PE', description: 'Sigla de duas letras.' },
+};
+
+const acidenteSchema: OpenAPIV3.SchemaObject = {
+  type: 'object',
+  description: 'Acidente de trabalho — fato de origem do evento S-2210 (CAT).',
+  properties: {
+    id: { type: 'string', format: 'uuid' },
+    colaboradorId: { type: 'string', format: 'uuid' },
+    ...camposAcidente,
+    createdAt: { type: 'string', format: 'date-time' },
+    updatedAt: { type: 'string', format: 'date-time' },
+  },
+  required: ['id', 'colaboradorId', 'dataAcidente', 'tipoAcidente', 'tipoCat', 'descricao'],
+};
+
+const createAcidenteSchema: OpenAPIV3.SchemaObject = {
+  type: 'object',
+  properties: { colaboradorId: { type: 'string', format: 'uuid' }, ...camposAcidente },
+  required: [
+    'colaboradorId',
+    'dataAcidente',
+    'horaAcidente',
+    'horasTrabalhadasAntes',
+    'tipoAcidente',
+    'localAcidente',
+    'parteAtingida',
+    'agenteCausador',
+    'tipoLesao',
+    'descricao',
+    'dataAtendimento',
+    'horaAtendimento',
+    'medico',
+    'crm',
+    'ufCrm',
+  ],
+};
+
+const updateAcidenteSchema: OpenAPIV3.SchemaObject = {
+  type: 'object',
+  description: 'Não é possível transferir o acidente para outro colaborador.',
+  properties: camposAcidente,
+};
+
+const aptidaoSchema: OpenAPIV3.SchemaObject = {
+  type: 'object',
+  properties: {
+    colaboradorId: { type: 'string', format: 'uuid' },
+    situacao: {
+      type: 'string',
+      enum: ['APTO', 'APTO_COM_RESTRICOES', 'INAPTO', 'VENCIDO', 'SEM_ASO', 'DESLIGADO'],
+    },
+    apto: { type: 'boolean', description: 'Pode exercer a função hoje.' },
+    motivo: { type: 'string', example: 'Apto conforme ASO de 2026-02-01.' },
+    asoVigente: { ...asoSchema, nullable: true },
+    proximoVencimento: { type: 'string', format: 'date-time', nullable: true },
+    diasParaVencimento: {
+      type: 'integer',
+      nullable: true,
+      description: 'Negativo quando o ASO já venceu.',
+    },
+    periodicidadeMeses: {
+      type: 'integer',
+      nullable: true,
+      description: 'Intervalo do exame periódico aplicado (NR-07): 12 ou 24 meses.',
+    },
+  },
+  required: ['colaboradorId', 'situacao', 'apto', 'motivo'],
+};
+
 const riscoSchema: OpenAPIV3.SchemaObject = {
   type: 'object',
   properties: {
@@ -199,6 +326,7 @@ const eventoESocialSchema: OpenAPIV3.SchemaObject = {
     colaboradorId: { type: 'string', format: 'uuid', nullable: true },
     asoId: { type: 'string', format: 'uuid', nullable: true },
     riscoId: { type: 'string', format: 'uuid', nullable: true },
+    acidenteId: { type: 'string', format: 'uuid', nullable: true },
     tipoEvento: { type: 'string', enum: ['S_2210', 'S_2220', 'S_2240'] },
     payloadXml: { type: 'string', description: 'XML no leiaute S-1.2.' },
     status: { type: 'string', enum: ['PENDENTE', 'ENVIADO', 'ACEITO', 'REJEITADO'] },
@@ -219,6 +347,12 @@ const gerarDeAsoSchema: OpenAPIV3.SchemaObject = {
   required: ['asoId'],
 };
 
+const gerarDeAcidenteSchema: OpenAPIV3.SchemaObject = {
+  type: 'object',
+  properties: { acidenteId: { type: 'string', format: 'uuid' } },
+  required: ['acidenteId'],
+};
+
 const gerarDeRiscoSchema: OpenAPIV3.SchemaObject = {
   type: 'object',
   description: 'O S-2240 declara a exposição de um trabalhador específico ao agente nocivo.',
@@ -227,6 +361,57 @@ const gerarDeRiscoSchema: OpenAPIV3.SchemaObject = {
     colaboradorId: { type: 'string', format: 'uuid' },
   },
   required: ['riscoId', 'colaboradorId'],
+};
+
+const CLASSIFICACOES_RISCO = ['BAIXO', 'MODERADO', 'ALTO', 'CRITICO'];
+
+const relatorioPgrSchema: OpenAPIV3.SchemaObject = {
+  type: 'object',
+  description: 'Conteúdo do PGR no formato JSON (formato=json).',
+  properties: {
+    empresa: {
+      type: 'object',
+      properties: {
+        razaoSocial: { type: 'string' },
+        nomeFantasia: { type: 'string' },
+        cnpj: { type: 'string' },
+        cnae: { type: 'string' },
+        grauRisco: { type: 'integer' },
+      },
+    },
+    geradoEm: { type: 'string', format: 'date-time' },
+    itens: {
+      type: 'array',
+      description: 'Inventário de riscos, do maior para o menor nível.',
+      items: {
+        type: 'object',
+        properties: {
+          id: { type: 'string', format: 'uuid' },
+          descricao: { type: 'string' },
+          tipo: { type: 'string', enum: TIPOS_RISCO },
+          severidade: { type: 'integer', minimum: 1, maximum: 5 },
+          probabilidade: { type: 'integer', minimum: 1, maximum: 5 },
+          nivelRisco: { type: 'integer', description: 'severidade × probabilidade (1 a 25).' },
+          classificacao: { type: 'string', enum: CLASSIFICACOES_RISCO },
+          medidasControle: {
+            type: 'array',
+            items: { type: 'string' },
+            description: 'Sugestões na ordem da hierarquia de controle da NR-01.',
+          },
+        },
+      },
+    },
+    resumo: {
+      type: 'object',
+      properties: {
+        totalRiscos: { type: 'integer' },
+        porClassificacao: { type: 'object', additionalProperties: { type: 'integer' } },
+        porTipo: { type: 'object', additionalProperties: { type: 'integer' } },
+        maiorNivel: { type: 'integer' },
+      },
+    },
+  },
+  required: ['empresa', 'geradoEm', 'itens', 'resumo'],
 };
 
 const healthSchema: OpenAPIV3.SchemaObject = {
@@ -327,7 +512,10 @@ export const openApiSpec: OpenAPIV3.Document = {
     { name: 'Empresas', description: 'CRUD de empresas (tenants).' },
     { name: 'Colaboradores', description: 'CRUD de colaboradores vinculados a empresas.' },
     { name: 'ASO', description: 'Atestados de Saúde Ocupacional dos colaboradores.' },
+    { name: 'Aptidão', description: 'Situação de aptidão do trabalhador e vencimento do ASO.' },
+    { name: 'Acidentes', description: 'Acidentes de trabalho — origem da CAT (S-2210).' },
     { name: 'Riscos', description: 'Riscos ocupacionais catalogados no PGR.' },
+    { name: 'Relatórios', description: 'Relatório do PGR em diferentes formatos.' },
     {
       name: 'eSocial',
       description: 'Geração, validação, transmissão e reenvio de eventos (leiaute S-1.2).',
@@ -666,6 +854,28 @@ export const openApiSpec: OpenAPIV3.Document = {
         },
       },
     },
+    '/colaboradores/{id}/aptidao': {
+      get: {
+        tags: ['Aptidão'],
+        summary: 'Avaliar aptidão do colaborador',
+        description:
+          'Avalia o ASO mais recente que atesta aptidão e calcula o vencimento do exame ' +
+          'periódico segundo a NR-07: 24 meses em grau de risco 1 e 2; 12 meses em grau 3 e 4, ' +
+          'para menores de 18 anos, maiores de 45 anos e portadores de restrição.',
+        parameters: [uuidParam],
+        responses: {
+          '200': {
+            description: 'Situação de aptidão apurada.',
+            content: { 'application/json': { schema: aptidaoSchema } },
+          },
+          '401': unauthorizedResponse,
+          '404': {
+            description: 'Colaborador não encontrado.',
+            content: { 'application/json': { schema: errorSchema } },
+          },
+        },
+      },
+    },
     '/asos': {
       get: {
         tags: ['ASO'],
@@ -764,6 +974,116 @@ export const openApiSpec: OpenAPIV3.Document = {
           },
           '404': {
             description: 'ASO não encontrado.',
+            content: { 'application/json': { schema: errorSchema } },
+          },
+        },
+      },
+    },
+    '/acidentes': {
+      get: {
+        tags: ['Acidentes'],
+        summary: 'Listar acidentes',
+        description: 'Acidentes dos colaboradores do tenant, do mais recente ao mais antigo.',
+        parameters: [
+          {
+            name: 'colaboradorId',
+            in: 'query',
+            required: false,
+            schema: { type: 'string', format: 'uuid' },
+            description: 'Filtra pelo histórico de um colaborador específico.',
+          },
+        ],
+        responses: {
+          '200': {
+            description: 'Lista de acidentes.',
+            content: {
+              'application/json': { schema: { type: 'array', items: acidenteSchema } },
+            },
+          },
+          '401': unauthorizedResponse,
+        },
+      },
+      post: {
+        tags: ['Acidentes'],
+        summary: 'Registrar acidente de trabalho',
+        description:
+          'Registra o acidente que dá origem à CAT. O prazo legal de comunicação é o primeiro ' +
+          'dia útil seguinte, e imediato em caso de óbito (Lei 8.213/91, art. 22).',
+        requestBody: {
+          required: true,
+          content: { 'application/json': { schema: createAcidenteSchema } },
+        },
+        responses: {
+          '201': {
+            description: 'Acidente registrado.',
+            content: { 'application/json': { schema: acidenteSchema } },
+          },
+          '400': {
+            description: 'Dados inválidos.',
+            content: { 'application/json': { schema: errorSchema } },
+          },
+          '401': unauthorizedResponse,
+          '404': {
+            description: 'Colaborador não encontrado no tenant.',
+            content: { 'application/json': { schema: errorSchema } },
+          },
+        },
+      },
+    },
+    '/acidentes/{id}': {
+      get: {
+        tags: ['Acidentes'],
+        summary: 'Buscar acidente por id',
+        parameters: [uuidParam],
+        responses: {
+          '200': {
+            description: 'Acidente encontrado.',
+            content: { 'application/json': { schema: acidenteSchema } },
+          },
+          '401': unauthorizedResponse,
+          '404': {
+            description: 'Acidente não encontrado.',
+            content: { 'application/json': { schema: errorSchema } },
+          },
+        },
+      },
+      put: {
+        tags: ['Acidentes'],
+        summary: 'Atualizar acidente',
+        parameters: [uuidParam],
+        requestBody: {
+          required: true,
+          content: { 'application/json': { schema: updateAcidenteSchema } },
+        },
+        responses: {
+          '200': {
+            description: 'Acidente atualizado.',
+            content: { 'application/json': { schema: acidenteSchema } },
+          },
+          '400': {
+            description: 'Dados inválidos.',
+            content: { 'application/json': { schema: errorSchema } },
+          },
+          '401': unauthorizedResponse,
+          '404': {
+            description: 'Acidente não encontrado.',
+            content: { 'application/json': { schema: errorSchema } },
+          },
+        },
+      },
+      delete: {
+        tags: ['Acidentes'],
+        summary: 'Remover acidente (ADMIN)',
+        parameters: [uuidParam],
+        responses: {
+          '204': { description: 'Acidente removido.' },
+          '401': unauthorizedResponse,
+          '403': {
+            description: 'Apenas administradores podem remover acidentes.',
+            content: { 'application/json': { schema: errorSchema } },
+          },
+          '404': {
+            description: 'Acidente não encontrado.',
             content: { 'application/json': { schema: errorSchema } },
           },
         },
@@ -903,6 +1223,34 @@ export const openApiSpec: OpenAPIV3.Document = {
         },
       },
     },
+    '/eventos-esocial/acidente': {
+      post: {
+        tags: ['eSocial'],
+        summary: 'Gerar S-2210 (CAT) a partir de um acidente',
+        description:
+          'Monta e valida o XML do evento S-2210 a partir do acidente registrado. ' +
+          'O evento nasce em PENDENTE e só é transmitido pelo endpoint de envio.',
+        requestBody: {
+          required: true,
+          content: { 'application/json': { schema: gerarDeAcidenteSchema } },
+        },
+        responses: {
+          '201': {
+            description: 'Evento gerado em PENDENTE.',
+            content: { 'application/json': { schema: eventoESocialSchema } },
+          },
+          '400': {
+            description: 'XML fora do leiaute S-1.2 (H3.2) ou acidenteId ausente.',
+            content: { 'application/json': { schema: errorSchema } },
+          },
+          '401': unauthorizedResponse,
+          '404': {
+            description: 'Acidente não encontrado no tenant.',
+            content: { 'application/json': { schema: errorSchema } },
+          },
+        },
+      },
+    },
     '/eventos-esocial/risco': {
       post: {
         tags: ['eSocial'],
@@ -1015,6 +1363,43 @@ export const openApiSpec: OpenAPIV3.Document = {
           },
           '409': {
             description: 'Evento não está em REJEITADO.',
+            content: { 'application/json': { schema: errorSchema } },
+          },
+        },
+      },
+    },
+    '/relatorios/pgr': {
+      get: {
+        tags: ['Relatórios'],
+        summary: 'Gerar relatório do PGR',
+        description:
+          'Compila o inventário de riscos da empresa do usuário, com nível (severidade × ' +
+          'probabilidade), classificação e medidas de controle sugeridas. O formato é ' +
+          'escolhido na query; o gerador depende apenas de `IExportadorRelatorio`.',
+        parameters: [
+          {
+            name: 'formato',
+            in: 'query',
+            required: false,
+            schema: { type: 'string', enum: ['html', 'json'], default: 'html' },
+            description: 'html: documento imprimível em PDF pelo navegador. json: dados brutos.',
+          },
+        ],
+        responses: {
+          '200': {
+            description: 'Relatório gerado.',
+            content: {
+              'text/html': { schema: { type: 'string' } },
+              'application/json': { schema: relatorioPgrSchema },
+            },
+          },
+          '400': {
+            description: 'Formato inválido.',
+            content: { 'application/json': { schema: errorSchema } },
+          },
+          '401': unauthorizedResponse,
+          '404': {
+            description: 'Empresa não encontrada.',
             content: { 'application/json': { schema: errorSchema } },
           },
         },

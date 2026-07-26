@@ -1,20 +1,27 @@
 import { ValidationError } from '../errors/AppError.js';
 import type { CreateEmpresaData, UpdateEmpresaData } from '../entities/Empresa.js';
+import { isCnpjValido, somenteDigitos as onlyDigits } from './documentos.js';
 
 const CNPJ_LENGTH = 14;
 const CNAE_MAX_LENGTH = 10;
 const GRAU_RISCO_MIN = 1;
 const GRAU_RISCO_MAX = 4;
 
-const onlyDigits = (value: string): string => value.replace(/\D/g, '');
+/** Comprimento e dígito verificador: um CNPJ inválido só seria rejeitado no eSocial. */
+const assertCnpj = (cnpj: string): void => {
+  if (cnpj.length !== CNPJ_LENGTH) {
+    throw new ValidationError('CNPJ deve conter exatamente 14 dígitos.');
+  }
+  if (!isCnpjValido(cnpj)) {
+    throw new ValidationError('CNPJ inválido: o dígito verificador não confere.');
+  }
+};
 
 export const normalizeCnpj = (cnpj: string): string => onlyDigits(cnpj);
 
 export const validateCreateEmpresa = (data: CreateEmpresaData): CreateEmpresaData => {
   const cnpj = normalizeCnpj(data.cnpj);
-  if (cnpj.length !== CNPJ_LENGTH) {
-    throw new ValidationError('CNPJ deve conter exatamente 14 dígitos.');
-  }
+  assertCnpj(cnpj);
   if (!data.razaoSocial?.trim()) {
     throw new ValidationError('Razão social é obrigatória.');
   }
@@ -44,9 +51,7 @@ export const validateUpdateEmpresa = (data: UpdateEmpresaData): UpdateEmpresaDat
 
   if (data.cnpj !== undefined) {
     const cnpj = normalizeCnpj(data.cnpj);
-    if (cnpj.length !== CNPJ_LENGTH) {
-      throw new ValidationError('CNPJ deve conter exatamente 14 dígitos.');
-    }
+    assertCnpj(cnpj);
     result.cnpj = cnpj;
   }
   if (data.razaoSocial !== undefined && !data.razaoSocial.trim()) {

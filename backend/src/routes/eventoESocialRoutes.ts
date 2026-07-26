@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import {
   enviarEvento,
+  gerarDeAcidente,
   gerarDeAso,
   gerarDeRisco,
   getEventoById,
@@ -22,6 +23,7 @@ router.get('/:id/xml', getEventoXml);
 // Geração do evento a partir do fato de origem.
 router.post('/aso', gerarDeAso);
 router.post('/risco', gerarDeRisco);
+router.post('/acidente', gerarDeAcidente);
 
 // Transmitir ao eSocial cria obrigação legal — restrita a ADMIN.
 router.post('/:id/enviar', authorize('ADMIN'), enviarEvento);

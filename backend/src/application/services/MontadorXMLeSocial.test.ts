@@ -2,7 +2,7 @@ import { AppError } from '../../domain/errors/AppError.js';
 import { ValidadorSchemaS12 } from '../../infrastructure/esocial/ValidadorSchemaS12.js';
 import type { IValidadorSchema } from '../ports/IValidadorSchema.js';
 import { MontadorXMLeSocial } from './MontadorXMLeSocial.js';
-import { asoA, colaboradorA, empresaA, riscoA } from './__fixtures__/esocial.js';
+import { acidenteA, asoA, colaboradorA, empresaA, riscoA } from './__fixtures__/esocial.js';
 
 const montador = new MontadorXMLeSocial(new ValidadorSchemaS12());
 
@@ -16,8 +16,8 @@ describe('MontadorXMLeSocial — H3.1 (geração a partir do domínio)', () => {
     });
 
     expect(tipoEvento).toBe('S_2220');
-    expect(xml).toContain('<cpfTrab>12345678901</cpfTrab>');
-    expect(xml).toContain('<nrInsc>12345678000199</nrInsc>');
+    expect(xml).toContain('<cpfTrab>12345678909</cpfTrab>');
+    expect(xml).toContain('<nrInsc>11222333000181</nrInsc>');
     expect(xml).toContain('<dtAso>2026-02-01</dtAso>');
     expect(xml).toContain('<nmMed>Dr. João Souza</nmMed>');
     // PERIODICO → código 1 da tabela de tipo de exame.
@@ -36,6 +36,76 @@ describe('MontadorXMLeSocial — H3.1 (geração a partir do domínio)', () => {
     expect(xml).toContain('<codAgNoc>01.01.001</codAgNoc>');
     expect(xml).toContain('Ruído contínuo acima de 85 dB(A)');
     expect(xml).toContain('evtExpRisco');
+  });
+
+  it('monta o S-2210 (CAT) com os dados do acidente', () => {
+    const { tipoEvento, xml } = montador.montarDeAcidente({
+      empresa: empresaA,
+      colaborador: colaboradorA,
+      acidente: acidenteA,
+      ambiente: 'PRODUCAO_RESTRITA',
+    });
+
+    expect(tipoEvento).toBe('S_2210');
+    expect(xml).toContain('evtCAT');
+    expect(xml).toContain('<dtAcid>2026-03-02</dtAcid>');
+    expect(xml).toContain('<hrAcid>1430</hrAcid>');
+    // TIPICO → código 1; CAT inicial → tpCat 1.
+    expect(xml).toContain('<tpAcid>1</tpAcid>');
+    expect(xml).toContain('<tpCat>1</tpCat>');
+    expect(xml).toContain('<codCID>S61.0</codCID>');
+    expect(xml).toContain('<nrOC>CRM-PE 54321</nrOC>');
+  });
+
+  it('omite dtObito quando não houve óbito e o inclui quando houve', () => {
+    const semObito = montador.montarDeAcidente({
+      empresa: empresaA,
+      colaborador: colaboradorA,
+      acidente: acidenteA,
+      ambiente: 'PRODUCAO_RESTRITA',
+    }).xml;
+
+    const comObito = montador.montarDeAcidente({
+      empresa: empresaA,
+      colaborador: colaboradorA,
+      acidente: {
+        ...acidenteA,
+        obito: true,
+        dataObito: new Date('2026-03-03T00:00:00.000Z'),
+        tipoCat: 'COMUNICACAO_OBITO',
+      },
+      ambiente: 'PRODUCAO_RESTRITA',
+    }).xml;
+
+    expect(semObito).toContain('<indCatObito>N</indCatObito>');
+    expect(semObito).not.toContain('<dtObito>');
+    expect(comObito).toContain('<indCatObito>S</indCatObito>');
+    expect(comObito).toContain('<dtObito>2026-03-03</dtObito>');
+    expect(comObito).toContain('<tpCat>3</tpCat>');
+  });
+
+  it('omite codCID quando o acidente não tem CID informado', () => {
+    const { xml } = montador.montarDeAcidente({
+      empresa: empresaA,
+      colaborador: colaboradorA,
+      acidente: { ...acidenteA, cid: null },
+      ambiente: 'PRODUCAO_RESTRITA',
+    });
+
+    expect(xml).not.toContain('<codCID>');
+    // O restante do atestado continua presente e válido.
+    expect(xml).toContain('<dscLesao>301000</dscLesao>');
+  });
+
+  it('escapa caracteres especiais na descrição do acidente', () => {
+    const { xml } = montador.montarDeAcidente({
+      empresa: empresaA,
+      colaborador: colaboradorA,
+      acidente: { ...acidenteA, descricao: 'Prensa <sem> proteção & sem bloqueio' },
+      ambiente: 'PRODUCAO_RESTRITA',
+    });
+
+    expect(xml).toContain('Prensa &lt;sem&gt; proteção &amp; sem bloqueio');
   });
 
   it('reflete o ambiente no campo tpAmb (H3.5)', () => {

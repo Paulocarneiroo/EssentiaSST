@@ -1,3 +1,11 @@
+import type {
+  Acidente,
+  AgenteCausador,
+  ParteAtingida,
+  TipoAcidente,
+  TipoCat,
+  TipoLesao,
+} from '../../domain/entities/Acidente.js';
 import type { Aso, ResultadoAso, TipoExame } from '../../domain/entities/Aso.js';
 import type { Colaborador } from '../../domain/entities/Colaborador.js';
 import type { Empresa } from '../../domain/entities/Empresa.js';
@@ -27,6 +35,13 @@ export interface ContextoRisco {
   empresa: Empresa;
   colaborador: Colaborador;
   risco: Risco;
+  ambiente: AmbienteESocial;
+}
+
+export interface ContextoAcidente {
+  empresa: Empresa;
+  colaborador: Colaborador;
+  acidente: Acidente;
   ambiente: AmbienteESocial;
 }
 
@@ -68,6 +83,69 @@ const COD_AGENTE_NOCIVO: Record<TipoRisco, string> = {
   ERGONOMICO: '09.01.001',
   ACIDENTE: '09.01.001',
 };
+
+/** Campo `tpAcid` do S-2210. */
+const COD_TIPO_ACIDENTE: Record<TipoAcidente, string> = {
+  TIPICO: '1',
+  DOENCA: '2',
+  TRAJETO: '3',
+};
+
+/** Campo `tpCat`: 1 = inicial, 2 = reabertura, 3 = comunicação de óbito. */
+const COD_TIPO_CAT: Record<TipoCat, string> = {
+  INICIAL: '1',
+  REABERTURA: '2',
+  COMUNICACAO_OBITO: '3',
+};
+
+/**
+ * Códigos das tabelas 11 a 14 do eSocial (lesão, agente causador, parte atingida
+ * e situação geradora), a partir das categorias do domínio.
+ *
+ * ATENÇÃO: mesmo caráter representativo do mapeamento de agentes nocivos —
+ * suficiente para um evento estruturalmente válido, mas antes de qualquer uso em
+ * produção cada acidente deve receber o código específico das tabelas oficiais,
+ * que são bem mais granulares do que estas categorias.
+ */
+const COD_SITUACAO_GERADORA: Record<TipoAcidente, string> = {
+  TIPICO: '310000',
+  DOENCA: '900002',
+  TRAJETO: '900001',
+};
+
+const COD_PARTE_ATINGIDA: Record<ParteAtingida, string> = {
+  CABECA: '100000',
+  OLHOS: '120000',
+  MAO: '540000',
+  BRACO: '520000',
+  TRONCO: '300000',
+  PERNA: '620000',
+  PE: '640000',
+  MULTIPLAS: '900000',
+};
+
+const COD_AGENTE_CAUSADOR: Record<AgenteCausador, string> = {
+  MAQUINA: '200000',
+  FERRAMENTA: '210000',
+  QUEDA: '300000',
+  VEICULO: '400000',
+  SUBSTANCIA_QUIMICA: '500000',
+  ELETRICIDADE: '600000',
+  OUTRO: '900000',
+};
+
+const COD_LESAO: Record<TipoLesao, string> = {
+  CORTE: '301000',
+  FRATURA: '302000',
+  QUEIMADURA: '303000',
+  CONTUSAO: '304000',
+  ENTORSE: '305000',
+  INTOXICACAO: '306000',
+  OUTRA: '900000',
+};
+
+/** Campos `S`/`N` do leiaute. */
+const simNao = (valor: boolean): string => (valor ? 'S' : 'N');
 
 const escapeXml = (value: string): string =>
   value
@@ -176,6 +254,69 @@ export class MontadorXMLeSocial {
 </eSocial>`;
 
     return this.validarEMontar('S_2240', xml);
+  }
+
+  /** Evento S-2210 — Comunicação de Acidente de Trabalho (CAT). */
+  montarDeAcidente(ctx: ContextoAcidente, sequencial = 1, agora = new Date()): EventoMontado {
+    const { empresa, colaborador, acidente, ambiente } = ctx;
+
+    // Elementos condicionais: só aparecem quando o fato os justifica.
+    const dtObito =
+      acidente.obito && acidente.dataObito
+        ? `
+      <dtObito>${formatDate(acidente.dataObito)}</dtObito>`
+        : '';
+    const codCid = acidente.cid
+      ? `
+        <codCID>${escapeXml(acidente.cid)}</codCID>`
+      : '';
+
+    const xml = `<?xml version="1.0" encoding="UTF-8"?>
+<eSocial xmlns="http://www.esocial.gov.br/schema/evt/evtCAT/v_${VERSAO_LEIAUTE}">
+  <evtCAT Id="${gerarId(empresa.cnpj, sequencial, agora)}">${ideEvento(ambiente)}${ideEmpregador(empresa)}${ideVinculo(colaborador)}
+    <cat>
+      <dtAcid>${formatDate(acidente.dataAcidente)}</dtAcid>
+      <tpAcid>${COD_TIPO_ACIDENTE[acidente.tipoAcidente]}</tpAcid>
+      <hrAcid>${escapeXml(acidente.horaAcidente)}</hrAcid>
+      <hrsTrabAntesAcid>${escapeXml(acidente.horasTrabalhadasAntes)}</hrsTrabAntesAcid>
+      <tpCat>${COD_TIPO_CAT[acidente.tipoCat]}</tpCat>
+      <indCatObito>${simNao(acidente.obito)}</indCatObito>${dtObito}
+      <indComunPolicia>${simNao(acidente.comunicadoPolicia)}</indComunPolicia>
+      <codSitGeradora>${COD_SITUACAO_GERADORA[acidente.tipoAcidente]}</codSitGeradora>
+      <iniciatCAT>1</iniciatCAT>
+      <obsCAT>${escapeXml(acidente.descricao)}</obsCAT>
+      <localAcidente>
+        <tpLocal>1</tpLocal>
+        <dscLocal>${escapeXml(acidente.localAcidente)}</dscLocal>
+        <tpInsc>1</tpInsc>
+        <nrInsc>${escapeXml(empresa.cnpj)}</nrInsc>
+      </localAcidente>
+      <parteAtingida>
+        <codParteAting>${COD_PARTE_ATINGIDA[acidente.parteAtingida]}</codParteAting>
+        <lateralidade>0</lateralidade>
+      </parteAtingida>
+      <agenteCausador>
+        <codAgntCausador>${COD_AGENTE_CAUSADOR[acidente.agenteCausador]}</codAgntCausador>
+      </agenteCausador>
+      <atestado>
+        <dtAtendimento>${formatDate(acidente.dataAtendimento)}</dtAtendimento>
+        <hrAtendimento>${escapeXml(acidente.horaAtendimento)}</hrAtendimento>
+        <indInternacao>${simNao(acidente.houveInternacao)}</indInternacao>
+        <durTrat>${acidente.duracaoTratamentoDias}</durTrat>
+        <indAfast>${simNao(acidente.houveAfastamento)}</indAfast>
+        <dscLesao>${COD_LESAO[acidente.tipoLesao]}</dscLesao>${codCid}
+        <emitente>
+          <nmEmit>${escapeXml(acidente.medico)}</nmEmit>
+          <ideOC>1</ideOC>
+          <nrOC>${escapeXml(acidente.crm)}</nrOC>
+          <ufOC>${escapeXml(acidente.ufCrm)}</ufOC>
+        </emitente>
+      </atestado>
+    </cat>
+  </evtCAT>
+</eSocial>`;
+
+    return this.validarEMontar('S_2210', xml);
   }
 
   /** H3.2: XML fora do schema é bloqueado, com indicação do problema. */

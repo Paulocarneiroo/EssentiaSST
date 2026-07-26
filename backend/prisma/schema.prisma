@@ -68,9 +68,10 @@ model Colaborador {
   createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt      DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  empresa Empresa           @relation(fields: [empresaId], references: [id], onDelete: Cascade)
-  asos    Aso[]
-  eventos EventoESocial[]
+  empresa   Empresa         @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  asos      Aso[]
+  acidentes Acidente[]
+  eventos   EventoESocial[]
 
   @@unique([empresaId, cpf])
   @@index([empresaId])
@@ -128,7 +129,7 @@ enum TipoRisco {
   @@map("tipo_risco")
 }
 
-/// Risco ocupacional catalogado no PGR — agregação com Empresa.
+/// Risco ocupacional catalogado no PGR — composição com Empresa (avaliado no ambiente dela).
 model Risco {
   id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   empresaId     String    @map("empresa_id") @db.Uuid
@@ -144,6 +145,103 @@ model Risco {
 
   @@index([empresaId])
   @@map("riscos")
+}
+
+// ---------------------------------------------------------------------------
+// Módulo 4: Acidente de trabalho (origem do evento S-2210 — CAT).
+// ---------------------------------------------------------------------------
+
+/// Natureza do acidente conforme o campo `tpAcid` do leiaute.
+enum TipoAcidente {
+  TIPICO
+  DOENCA
+  TRAJETO
+
+  @@map("tipo_acidente")
+}
+
+/// Momento da comunicação conforme o campo `tpCat`.
+enum TipoCat {
+  INICIAL
+  REABERTURA
+  COMUNICACAO_OBITO
+
+  @@map("tipo_cat")
+}
+
+enum ParteAtingida {
+  CABECA
+  OLHOS
+  MAO
+  BRACO
+  TRONCO
+  PERNA
+  PE
+  MULTIPLAS
+
+  @@map("parte_atingida")
+}
+
+enum AgenteCausador {
+  MAQUINA
+  FERRAMENTA
+  QUEDA
+  VEICULO
+  SUBSTANCIA_QUIMICA
+  ELETRICIDADE
+  OUTRO
+
+  @@map("agente_causador")
+}
+
+enum TipoLesao {
+  CORTE
+  FRATURA
+  QUEIMADURA
+  CONTUSAO
+  ENTORSE
+  INTOXICACAO
+  OUTRA
+
+  @@map("tipo_lesao")
+}
+
+/// Acidente de trabalho — composição com Colaborador; origem do evento S-2210.
+model Acidente {
+  id                    String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  colaboradorId         String         @map("colaborador_id") @db.Uuid
+  dataAcidente          DateTime       @map("data_acidente") @db.Date
+  /// Hora do acidente no formato HHMM exigido pelo leiaute.
+  horaAcidente          String         @map("hora_acidente") @db.VarChar(4)
+  /// Horas trabalhadas antes do acidente, formato HHMM.
+  horasTrabalhadasAntes String         @map("horas_trabalhadas_antes") @db.VarChar(4)
+  tipoAcidente          TipoAcidente   @map("tipo_acidente")
+  tipoCat               TipoCat        @default(INICIAL) @map("tipo_cat")
+  obito                 Boolean        @default(false)
+  dataObito             DateTime?      @map("data_obito") @db.Date
+  comunicadoPolicia     Boolean        @default(false) @map("comunicado_policia")
+  localAcidente         String         @map("local_acidente") @db.VarChar(255)
+  parteAtingida         ParteAtingida  @map("parte_atingida")
+  agenteCausador        AgenteCausador @map("agente_causador")
+  tipoLesao             TipoLesao      @map("tipo_lesao")
+  descricao             String
+  cid                   String?        @db.VarChar(10)
+  dataAtendimento       DateTime       @map("data_atendimento") @db.Date
+  horaAtendimento       String         @map("hora_atendimento") @db.VarChar(4)
+  houveInternacao       Boolean        @default(false) @map("houve_internacao")
+  houveAfastamento      Boolean        @default(false) @map("houve_afastamento")
+  duracaoTratamentoDias Int            @default(0) @map("duracao_tratamento_dias")
+  medico                String         @db.VarChar(255)
+  crm                   String         @db.VarChar(20)
+  ufCrm                 String         @map("uf_crm") @db.VarChar(2)
+  createdAt             DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt             DateTime       @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  colaborador Colaborador     @relation(fields: [colaboradorId], references: [id], onDelete: Cascade)
+  eventos     EventoESocial[]
+
+  @@index([colaboradorId])
+  @@map("acidentes")
 }
 
 enum TipoEventoESocial {
@@ -178,6 +276,7 @@ model EventoESocial {
   colaboradorId String?             @map("colaborador_id") @db.Uuid
   asoId         String?             @map("aso_id") @db.Uuid
   riscoId       String?             @map("risco_id") @db.Uuid
+  acidenteId    String?             @map("acidente_id") @db.Uuid
   tipoEvento    TipoEventoESocial   @map("tipo_evento")
   payloadXml    String              @map("payload_xml")
   status        StatusEventoESocial @default(PENDENTE)
@@ -193,10 +292,12 @@ model EventoESocial {
   colaborador Colaborador? @relation(fields: [colaboradorId], references: [id], onDelete: SetNull)
   aso         Aso?         @relation(fields: [asoId], references: [id], onDelete: SetNull)
   risco       Risco?       @relation(fields: [riscoId], references: [id], onDelete: SetNull)
+  acidente    Acidente?    @relation(fields: [acidenteId], references: [id], onDelete: SetNull)
 
   @@index([empresaId])
   @@index([empresaId, status])
   @@index([asoId])
   @@index([riscoId])
+  @@index([acidenteId])
   @@map("eventos_esocial")
 }

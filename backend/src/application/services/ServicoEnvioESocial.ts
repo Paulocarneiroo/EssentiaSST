@@ -6,6 +6,7 @@ import {
   type StatusEventoESocial,
 } from '../../domain/entities/EventoESocial.js';
 import { ConflictError, NotFoundError } from '../../domain/errors/AppError.js';
+import type { IAcidenteRepository } from '../ports/IAcidenteRepository.js';
 import type { IAsoRepository } from '../ports/IAsoRepository.js';
 import type { IClienteESocial, RespostaESocial } from '../ports/IClienteESocial.js';
 import type { IColaboradorRepository } from '../ports/IColaboradorRepository.js';
@@ -32,6 +33,7 @@ export class ServicoEnvioESocial {
     private readonly eventoRepository: IEventoESocialRepository,
     private readonly asoRepository: Pick<IAsoRepository, 'findById'>,
     private readonly riscoRepository: Pick<IRiscoRepository, 'findById'>,
+    private readonly acidenteRepository: Pick<IAcidenteRepository, 'findById'>,
     private readonly colaboradorRepository: Pick<IColaboradorRepository, 'findById'>,
     private readonly empresaRepository: Pick<IEmpresaRepository, 'findById'>,
     private readonly montador: MontadorXMLeSocial,
@@ -67,6 +69,7 @@ export class ServicoEnvioESocial {
       colaboradorId: colaborador.id,
       asoId: aso.id,
       riscoId: null,
+      acidenteId: null,
       tipoEvento,
       payloadXml: xml,
       ambiente: this.ambiente,
@@ -89,6 +92,33 @@ export class ServicoEnvioESocial {
       colaboradorId: colaborador.id,
       asoId: null,
       riscoId: risco.id,
+      acidenteId: null,
+      tipoEvento,
+      payloadXml: xml,
+      ambiente: this.ambiente,
+    });
+  }
+
+  /** H3.1 — gera o S-2210 (CAT) a partir de um acidente já registrado. */
+  async gerarDeAcidente(acidenteId: string, tenantId: string): Promise<EventoESocial> {
+    const { empresa, colaborador, acidente } = await this.carregarContextoAcidente(
+      acidenteId,
+      tenantId,
+    );
+
+    const { tipoEvento, xml } = this.montador.montarDeAcidente({
+      empresa,
+      colaborador,
+      acidente,
+      ambiente: this.ambiente,
+    });
+
+    return this.eventoRepository.create({
+      empresaId: tenantId,
+      colaboradorId: colaborador.id,
+      asoId: null,
+      riscoId: null,
+      acidenteId: acidente.id,
       tipoEvento,
       payloadXml: xml,
       ambiente: this.ambiente,
@@ -160,12 +190,25 @@ export class ServicoEnvioESocial {
     return this.enviar(evento.id, tenantId);
   }
 
-  /** Remonta o payload a partir do ASO ou risco vinculado ao evento. */
+  /** Remonta o payload a partir do ASO, acidente ou risco vinculado ao evento. */
   private async remontarPayload(evento: EventoESocial, tenantId: string): Promise<string> {
     if (evento.asoId) {
       const { empresa, colaborador, aso } = await this.carregarContextoAso(evento.asoId, tenantId);
       return this.montador.montarDeAso({ empresa, colaborador, aso, ambiente: evento.ambiente })
         .xml;
+    }
+
+    if (evento.acidenteId) {
+      const { empresa, colaborador, acidente } = await this.carregarContextoAcidente(
+        evento.acidenteId,
+        tenantId,
+      );
+      return this.montador.montarDeAcidente({
+        empresa,
+        colaborador,
+        acidente,
+        ambiente: evento.ambiente,
+      }).xml;
     }
 
     if (evento.riscoId && evento.colaboradorId) {
@@ -194,6 +237,20 @@ export class ServicoEnvioESocial {
     }
 
     return { empresa: await this.carregarEmpresa(tenantId), colaborador, aso };
+  }
+
+  private async carregarContextoAcidente(acidenteId: string, tenantId: string) {
+    const acidente = await this.acidenteRepository.findById(acidenteId);
+    if (!acidente) {
+      throw new NotFoundError(`Acidente com id "${acidenteId}" não encontrado.`);
+    }
+
+    const colaborador = await this.colaboradorRepository.findById(acidente.colaboradorId);
+    if (!colaborador || colaborador.empresaId !== tenantId) {
+      throw new NotFoundError(`Acidente com id "${acidenteId}" não encontrado.`);
+    }
+
+    return { empresa: await this.carregarEmpresa(tenantId), colaborador, acidente };
   }
 
   private async carregarContextoRisco(data: GerarDeRiscoData, tenantId: string) {

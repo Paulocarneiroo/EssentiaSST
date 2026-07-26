@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { getAptidao } from '../controllers/aptidaoController.js';
 import {
   createColaborador,
   deleteColaborador,
@@ -16,6 +17,7 @@ router.use(authenticate);
 // Rotina diária de SST: ADMIN e OPERADOR.
 router.get('/', listColaboradores);
 router.get('/:id', getColaboradorById);
+router.get('/:id/aptidao', getAptidao);
 router.post('/', createColaborador);
 router.put('/:id', updateColaborador);
 

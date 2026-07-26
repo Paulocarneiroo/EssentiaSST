@@ -52,7 +52,7 @@ describe('ValidadorSchemaS12 — H3.2 (bloqueia XML fora do schema)', () => {
   });
 
   it('acusa CPF fora do formato', () => {
-    const cpfCurto = xmlS2220.replace('<cpfTrab>12345678901<', '<cpfTrab>123<');
+    const cpfCurto = xmlS2220.replace('<cpfTrab>12345678909<', '<cpfTrab>123<');
     const resultado = validador.validar(cpfCurto);
 
     expect(resultado.valido).toBe(false);

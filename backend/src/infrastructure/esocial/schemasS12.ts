@@ -23,6 +23,11 @@ const CNPJ = /^\d{14}$/;
 /** "ID" + tpInsc (1) + CNPJ (14) + timestamp (14) + sequencial (5). */
 const ID_EVENTO = /^ID\d{34}$/;
 const COD_AGENTE = /^\d{2}\.\d{2}\.\d{3}$/;
+/** Hora no formato HHMM (`hrAcid`, `hrAtendimento`). */
+const HORA = /^([01]\d|2[0-3])[0-5]\d$/;
+/** Códigos das tabelas 11 a 14 do eSocial: seis dígitos. */
+const COD_TABELA = /^\d{6}$/;
+const SIM_NAO = ['S', 'N'];
 
 const ideEvento: ElementSpec = {
   name: 'ideEvento',
@@ -142,8 +147,88 @@ export const SCHEMA_S2240: ElementSpec = {
   ],
 };
 
+/** S-2210 — Comunicação de Acidente de Trabalho (CAT). */
+export const SCHEMA_S2210: ElementSpec = {
+  name: 'eSocial',
+  atributos: [
+    {
+      nome: 'xmlns',
+      padrao: new RegExp(`^http://www\\.esocial\\.gov\\.br/schema/evt/evtCAT/v_${VERSAO_LEIAUTE}$`),
+    },
+  ],
+  children: [
+    {
+      name: 'evtCAT',
+      atributos: [{ nome: 'Id', padrao: ID_EVENTO }],
+      children: [
+        ideEvento,
+        ideEmpregador,
+        ideVinculo,
+        {
+          name: 'cat',
+          children: [
+            { name: 'dtAcid', padrao: DATA },
+            { name: 'tpAcid', valores: ['1', '2', '3'] },
+            { name: 'hrAcid', padrao: HORA },
+            { name: 'hrsTrabAntesAcid', padrao: HORA },
+            { name: 'tpCat', valores: ['1', '2', '3'] },
+            { name: 'indCatObito', valores: SIM_NAO },
+            { name: 'dtObito', padrao: DATA, opcional: true },
+            { name: 'indComunPolicia', valores: SIM_NAO },
+            { name: 'codSitGeradora', padrao: COD_TABELA },
+            { name: 'iniciatCAT', valores: ['1', '2', '3'] },
+            { name: 'obsCAT', padrao: /^[\s\S]{1,999}$/, opcional: true },
+            {
+              name: 'localAcidente',
+              children: [
+                { name: 'tpLocal', valores: ['1', '2', '3', '4', '5', '6', '7', '8', '9'] },
+                { name: 'dscLocal', padrao: /^.{1,255}$/ },
+                { name: 'tpInsc', valores: ['1', '2', '3', '4'] },
+                { name: 'nrInsc', padrao: CNPJ },
+              ],
+            },
+            {
+              name: 'parteAtingida',
+              children: [
+                { name: 'codParteAting', padrao: COD_TABELA },
+                { name: 'lateralidade', valores: ['0', '1', '2', '3'] },
+              ],
+            },
+            {
+              name: 'agenteCausador',
+              children: [{ name: 'codAgntCausador', padrao: COD_TABELA }],
+            },
+            {
+              name: 'atestado',
+              children: [
+                { name: 'dtAtendimento', padrao: DATA },
+                { name: 'hrAtendimento', padrao: HORA },
+                { name: 'indInternacao', valores: SIM_NAO },
+                { name: 'durTrat', padrao: /^\d{1,4}$/ },
+                { name: 'indAfast', valores: SIM_NAO },
+                { name: 'dscLesao', padrao: COD_TABELA },
+                { name: 'codCID', padrao: /^[A-Z]\d{2}(\.\d)?$/, opcional: true },
+                {
+                  name: 'emitente',
+                  children: [
+                    { name: 'nmEmit', padrao: /^.{2,70}$/ },
+                    { name: 'ideOC', valores: ['1', '2', '3', '4', '5'] },
+                    { name: 'nrOC', padrao: /^.{1,14}$/ },
+                    { name: 'ufOC', padrao: /^[A-Z]{2}$/ },
+                  ],
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    },
+  ],
+};
+
 /** Seleciona o schema pelo elemento de evento presente no documento. */
 export const SCHEMAS_POR_EVENTO: Record<string, ElementSpec> = {
+  evtCAT: SCHEMA_S2210,
   evtMonit: SCHEMA_S2220,
   evtExpRisco: SCHEMA_S2240,
 };
