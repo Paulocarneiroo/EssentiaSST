@@ -35,6 +35,8 @@ export interface ESocialConfig {
 
 export interface AppEnv {
   nodeEnv: string;
+  /** Interface de rede onde o servidor escuta. `0.0.0.0` aceita conexões da LAN. */
+  host: string;
   port: number;
   db: DatabaseConfig;
   jwt: JwtConfig;
@@ -77,6 +79,7 @@ const parseTaxa = (value: string | undefined): number => {
 
 export const env: AppEnv = {
   nodeEnv: process.env.NODE_ENV ?? 'development',
+  host: process.env.HOST ?? '0.0.0.0',
   port: Number(process.env.PORT ?? 3000),
 
   db: {

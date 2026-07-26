@@ -45,7 +45,7 @@ backend/
 └── package.json
 ```
 
-A separação segue **SRP** (cada camada tem um motivo único para mudar) e prepara o terreno para **DIP** — os services dependerão de interfaces de repositório, não do driver `pg` diretamente, conforme evolução do domínio descrito no [README principal](../README.md).
+A separação segue **SRP** (cada camada tem um motivo único para mudar) e prepara o terreno para **DIP** — os services dependerão de interfaces de repositório, não do driver `pg` diretamente, conforme evolução do domínio descrito no [README principal](../docs/regras-de-negocio.md).
 
 ---
 
@@ -101,6 +101,61 @@ Com a API rodando, abra no navegador:
 **http://localhost:3000/api/docs**
 
 A especificação OpenAPI em JSON está em `http://localhost:3000/api/docs/openapi.json`.
+
+---
+
+## Acesso pela rede local
+
+A API roda em uma máquina (notebook) e é consumida de outra (PC principal).
+Por padrão `HOST=0.0.0.0`, ou seja, ela escuta em **todas as interfaces** — não
+só em `localhost`. No boot, o log já imprime os endereços alcançáveis:
+
+```
+EssentiaSST API ouvindo em 0.0.0.0:3000 (development)
+  local:   http://localhost:3000/api/docs
+  na rede: http://192.168.0.42:3000/api/docs
+```
+
+### Na máquina que roda a API (uma vez só)
+
+O Windows bloqueia conexões de entrada por padrão. Libere a porta 3000 em um
+**PowerShell como administrador**:
+
+```powershell
+New-NetFirewallRule -DisplayName "EssentiaSST API" -Direction Inbound `
+  -Protocol TCP -LocalPort 3000 -Action Allow -Profile Private
+```
+
+> `-Profile Private` restringe a regra a redes marcadas como *Particular*. Se a
+> conexão não passar, confirme o perfil da rede com `Get-NetConnectionProfile` —
+> em rede *Pública* o Windows bloqueia mesmo com a regra criada.
+
+Descobrir o IP da máquina:
+
+```powershell
+Get-NetIPAddress -AddressFamily IPv4 | Where-Object { $_.IPAddress -notlike '127.*' }
+```
+
+### Na máquina cliente
+
+Troque `localhost` pelo IP do notebook:
+
+```
+http://192.168.0.42:3000/api/docs      # Swagger
+http://192.168.0.42:3000/api/health    # health check
+```
+
+O Swagger funciona de qualquer host porque o `servers` do OpenAPI usa o caminho
+relativo `/api` — as requisições do "Try it out" vão para o mesmo endereço que
+serviu a página.
+
+Para restringir a API a acesso local de novo, basta `HOST=127.0.0.1` no `.env`.
+
+### Banco de dados
+
+O PostgreSQL (Docker) sobe **na mesma máquina da API** e é acessado por ela via
+`localhost:5432` — não precisa ser exposto na rede. Mantenha `DB_HOST=localhost`
+e não abra a porta 5432 no firewall.
 
 ### Verificar saúde
 
@@ -159,6 +214,7 @@ faz o estado depender de quem rodou o quê. Para criar uma migration nova, edite
 | Variável         | Descrição                                  | Default            |
 |------------------|--------------------------------------------|--------------------|
 | `NODE_ENV`       | Ambiente (`development`/`production`).     | `development`      |
+| `HOST`           | Interface de escuta (`0.0.0.0` = LAN).     | `0.0.0.0`          |
 | `PORT`           | Porta HTTP da API.                         | `3000`             |
 | `DB_HOST`        | Host do PostgreSQL.                        | `localhost`        |
 | `DB_PORT`        | Porta do PostgreSQL.                       | `5432`             |
