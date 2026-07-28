@@ -1,41 +1,31 @@
 import { empresaApi } from '../api/empresaApi.js';
-import type { CreateEmpresaData, Empresa, UpdateEmpresaData } from '../types/empresa.js';
+import { getEmpresaId } from '../state/session.js';
+import type { Empresa, UpdateEmpresaData } from '../types/empresa.js';
+import { onlyDigits } from './format.js';
 
-const onlyDigits = (value: string): string => value.replace(/\D/g, '');
+const empresaIdDaSessao = (): string => {
+  const id = getEmpresaId();
+  if (!id) {
+    throw new Error('Sessão sem empresa vinculada. Entre novamente.');
+  }
+  return id;
+};
 
 export const empresaService = {
-  async list(): Promise<Empresa[]> {
-    return empresaApi.list();
+  /** A empresa do usuário autenticado — o backend não devolve outras (H1.3). */
+  async minhaEmpresa(): Promise<Empresa> {
+    return empresaApi.getById(empresaIdDaSessao());
   },
 
-  async create(input: CreateEmpresaData): Promise<Empresa> {
-    return empresaApi.create({
-      ...input,
-      cnpj: onlyDigits(input.cnpj),
-      razaoSocial: input.razaoSocial.trim(),
-      nomeFantasia: input.nomeFantasia.trim(),
-      cnae: input.cnae.trim(),
-      grauRisco: Number(input.grauRisco),
-    });
-  },
-
-  async update(id: string, input: CreateEmpresaData): Promise<Empresa> {
+  async atualizar(input: UpdateEmpresaData): Promise<Empresa> {
     const payload: UpdateEmpresaData = {
-      cnpj: onlyDigits(input.cnpj),
-      razaoSocial: input.razaoSocial.trim(),
-      nomeFantasia: input.nomeFantasia.trim(),
-      cnae: input.cnae.trim(),
-      grauRisco: Number(input.grauRisco),
+      ...input,
+      cnpj: input.cnpj !== undefined ? onlyDigits(input.cnpj) : undefined,
+      razaoSocial: input.razaoSocial?.trim(),
+      nomeFantasia: input.nomeFantasia?.trim(),
+      cnae: input.cnae?.trim(),
+      grauRisco: input.grauRisco !== undefined ? Number(input.grauRisco) : undefined,
     };
-    return empresaApi.update(id, payload);
-  },
-
-  async remove(id: string): Promise<void> {
-    return empresaApi.remove(id);
-  },
-
-  formatCnpj(cnpj: string): string {
-    const digits = onlyDigits(cnpj).padStart(14, '0').slice(0, 14);
-    return digits.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, '$1.$2.$3/$4-$5');
+    return empresaApi.update(empresaIdDaSessao(), payload);
   },
 };

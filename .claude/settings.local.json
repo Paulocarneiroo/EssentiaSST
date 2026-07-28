@@ -19,7 +19,24 @@
       "Bash(rm -rf dist)",
       "Bash(docker compose *)",
       "Bash(echo \"PUSH EXIT: $?\")",
-      "Bash(echo \"TS EXIT: $?\")"
+      "Bash(echo \"TS EXIT: $?\")",
+      "Bash(mv smoke.ts smoke.mts)",
+      "Bash(D:/TRABALHO/EssentiaSST/backend/node_modules/.bin/tsx smoke.mts)",
+      "Bash(sed -i \"s/12345678000199/11222333000181/g; s/12345678901\\\\b/12345678909/g\" src/application/services/__fixtures__/esocial.ts src/config/openapi.ts src/application/services/MontadorXMLeSocial.test.ts src/infrastructure/esocial/ValidadorSchemaS12.test.ts)",
+      "Bash(sed -i \"s/98765432000188/98765432000198/g\" src/application/services/AuthService.test.ts src/application/services/ColaboradorService.test.ts src/application/services/isolamentoMultiTenant.test.ts)",
+      "Bash(sed -i \"s/11122233344/11122233396/g\" src/application/services/ColaboradorService.test.ts)",
+      "Bash(perl -0pi -e \"s/  enviarEvento,\\\\n  gerarDeAso,/  enviarEvento,\\\\n  gerarDeAcidente,\\\\n  gerarDeAso,/; s|router.post\\\\\\('/risco', gerarDeRisco\\\\\\);|router.post\\('/risco', gerarDeRisco\\);\\\\nrouter.post\\('/acidente', gerarDeAcidente\\);|\" src/routes/eventoESocialRoutes.ts)",
+      "Bash(perl -0pi -e \"s|import healthRoutes from './healthRoutes.js';|import healthRoutes from './healthRoutes.js';|; s|import asoRoutes from './asoRoutes.js';|import acidenteRoutes from './acidenteRoutes.js';\\\\nimport asoRoutes from './asoRoutes.js';|; s|router.use\\\\\\('/asos', asoRoutes\\\\\\);|router.use\\('/asos', asoRoutes\\);\\\\nrouter.use\\('/acidentes', acidenteRoutes\\);|\" src/routes/index.ts)",
+      "Bash(rm -f src/state/appState.ts src/ui/empresaView.ts src/ui/colaboradorView.ts)",
+      "Bash(echo \"EXIT=$?\")",
+      "Bash(node *)",
+      "Bash(mkdir -p \"/c/Users/Segundo/AppData/Local/Temp/claude/D--TRABALHO-EssentiaSST/014ea8d0-1dd3-4633-b11c-c88f46a59c61/scratchpad/pdfgen\")",
+      "Read(//c/Users/Segundo/AppData/Local/Temp/claude/D--TRABALHO-EssentiaSST/014ea8d0-1dd3-4633-b11c-c88f46a59c61/scratchpad/**)",
+      "Bash(npm init *)",
+      "Bash(AMOSTRA=2 node build.js amostra2.pdf)",
+      "Bash(cp TCC_V2.pdf \"/d/TRABALHO/EssentiaSST/docs/TCC_V2.pdf\")",
+      "Bash(mkdir -p \"/d/TRABALHO/EssentiaSST/docs/tcc-gerador\")",
+      "Bash(cp build.js content13.js content4.js figuras.js \"/d/TRABALHO/EssentiaSST/docs/tcc-gerador/\")"
     ]
   }
 }

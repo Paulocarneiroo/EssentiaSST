@@ -49,7 +49,7 @@ DOMÍNIO                              SERVIÇOS DE APLICAÇÃO              ABST
 | -cnae           |                                                    +---------------------------+
 | -grauRisco      |                                                    |     AptidaoService        |
 +-----------------+                                                    +---------------------------+
-        ◇ 1 agregação                                                  | -repo: IRepositorioASO    |
+        ◆ 1 composição                                                 | -repo: IRepositorioASO    |
         | 0..*                                                         +---------------------------+
 +-----------------+                                                    | +avaliarAptidao(colab)    |
 |      Risco      |                                                    | +proximoVencimento(colab) |
@@ -113,7 +113,7 @@ DOMÍNIO                              SERVIÇOS DE APLICAÇÃO              ABST
                                    +---------------------------+     +---------------------------+
 ```
 
-> Legenda: `◆` composição • `◇` agregação • `──►` associação • `depende de ▼ (DIP)` dependência invertida para abstração • `«interface»` contrato sem implementação • `▲ implementa` realização concreta.
+> Legenda: `◆` composição • `──►` associação • `depende de ▼ (DIP)` dependência invertida para abstração • `«interface»` contrato sem implementação • `▲ implementa` realização concreta.
 
 ---
 
@@ -174,6 +174,36 @@ Documento médico que atesta a aptidão do colaborador para a função.
 
 ---
 
+#### `Acidente` (Acidente de Trabalho)
+Registro do acidente que dá origem à CAT (evento S-2210).
+
+**Motivo único para mudar (SRP):** alterações nas regras de registro do acidente de trabalho.
+
+| Atributo                | Tipo     | Descrição                                                        |
+|-------------------------|----------|------------------------------------------------------------------|
+| `id`                    | UUID     | Identificador único.                                             |
+| `dataAcidente`          | date     | Data da ocorrência.                                              |
+| `horaAcidente`          | string   | Hora no formato HHMM exigido pelo leiaute.                       |
+| `horasTrabalhadasAntes` | string   | Horas trabalhadas antes do acidente (HHMM).                      |
+| `tipoAcidente`          | enum     | `TIPICO`, `DOENCA`, `TRAJETO`.                                   |
+| `tipoCat`               | enum     | `INICIAL`, `REABERTURA`, `COMUNICACAO_OBITO`.                    |
+| `obito` / `dataObito`   | bool/date? | Indicador de óbito e respectiva data.                          |
+| `comunicadoPolicia`     | bool     | Houve comunicação à autoridade policial.                         |
+| `localAcidente`         | string   | Descrição do local da ocorrência.                                |
+| `parteAtingida`         | enum     | Parte do corpo atingida.                                         |
+| `agenteCausador`        | enum     | Agente causador do acidente.                                     |
+| `tipoLesao`             | enum     | Natureza da lesão.                                               |
+| `descricao`             | text     | Narrativa do acidente (`obsCAT`).                                |
+| `cid`                   | string?  | CID-10 do diagnóstico (opcional).                                |
+| `dataAtendimento` / `horaAtendimento` | date/string | Atendimento médico.                        |
+| `houveInternacao` / `houveAfastamento` | bool | Desdobramentos clínicos.                      |
+| `duracaoTratamentoDias` | int      | Duração estimada do tratamento.                                  |
+| `medico` / `crm` / `ufCrm` | string | Emitente do atestado.                                          |
+
+**Prazo legal:** a comunicação é devida até o primeiro dia útil seguinte ao acidente, e de imediato em caso de óbito (Lei 8.213/91, art. 22) — `prazoComunicacaoExpirado()`.
+
+---
+
 #### `Risco` (Risco Ocupacional)
 Representa um risco identificado no ambiente de trabalho (PGR).
 
@@ -216,11 +246,15 @@ Avalia se um colaborador está apto com base no histórico de ASOs.
 
 **DIP aplicado:** recebe `IRepositorioASO` por injeção de dependência — não conhece o banco de dados concreto. Em testes, basta injetar `RepositorioASOInMemory`.
 
-| Membro                           | Descrição                                                   |
-|----------------------------------|-------------------------------------------------------------|
-| `-repo: IRepositorioASO`         | Abstração injetada para acesso aos ASOs.                    |
-| `+avaliarAptidao(colaborador)`   | Verifica o ASO mais recente e retorna o status de aptidão.  |
-| `+proximoVencimento(colaborador)`| Calcula a data de vencimento do ASO periódico vigente.      |
+| Membro                                    | Descrição                                                   |
+|-------------------------------------------|-------------------------------------------------------------|
+| `-repo: IRepositorioASO`                  | Abstração injetada para acesso aos ASOs.                    |
+| `+avaliarAptidao(colaborador, empresa)`   | Verifica o ASO mais recente e retorna o status de aptidão.  |
+| `+proximoVencimento(colaborador, empresa)`| Calcula a data de vencimento do ASO periódico vigente.      |
+
+**Situações retornadas:** `APTO`, `APTO_COM_RESTRICOES`, `INAPTO`, `VENCIDO`, `SEM_ASO`, `DESLIGADO`. O exame demissional não atesta aptidão para o trabalho e é ignorado na avaliação.
+
+**Periodicidade do exame periódico (NR-07):** 24 meses em grau de risco 1 e 2; 12 meses em grau de risco 3 e 4, para menores de 18 anos, maiores de 45 anos e para quem tem ASO com restrição. Por isso a `Empresa` (grau de risco) entra na assinatura junto do `Colaborador` — ambos chegam como dados já carregados, preservando `IRepositorioASO` como única dependência injetada.
 
 ---
 
@@ -231,10 +265,13 @@ Produz o relatório do PGR a partir dos dados da empresa e seus riscos.
 
 **DIP aplicado:** recebe `IExportadorRelatorio` por injeção — pode exportar para PDF, DOCX ou HTML sem alterar o serviço.
 
-| Membro                          | Descrição                                                    |
-|---------------------------------|--------------------------------------------------------------|
-| `-export: IExportadorRelatorio` | Abstração injetada para exportação do relatório.             |
-| `+gerar(empresa)`               | Compila os dados e delega a exportação ao injetado.          |
+| Membro                            | Descrição                                                    |
+|-----------------------------------|--------------------------------------------------------------|
+| `-export: IExportadorRelatorio`   | Abstração injetada para exportação do relatório.             |
+| `+gerar(empresa, riscos)`         | Compila os dados e delega a exportação ao injetado.          |
+| `+compilar(empresa, riscos)`      | Devolve o conteúdo do relatório sem exportar (usado em testes). |
+
+**Conteúdo do relatório:** identificação da empresa, inventário de riscos ordenado do maior para o menor nível (`severidade × probabilidade`, matriz 5×5), classificação em `BAIXO`/`MODERADO`/`ALTO`/`CRITICO`, medidas de controle sugeridas na hierarquia da NR-01 e resumo por classificação e por tipo.
 
 ---
 
@@ -250,6 +287,7 @@ Constrói o payload XML conforme o leiaute S-1.2.
 | `-schema: IValidadorSchema`  | Abstração injetada para validação do XML gerado.       |
 | `+montar(aso)`               | Monta o XML do evento S-2220 a partir de um ASO.       |
 | `+montar(risco)`             | Monta o XML do evento S-2240 a partir de um Risco.     |
+| `+montar(acidente)`          | Monta o XML do evento S-2210 (CAT) a partir de um Acidente. |
 | `+validarSchema(xml)`        | Valida o XML gerado contra o schema S-1.2.             |
 
 ---
@@ -275,7 +313,7 @@ Envia eventos ao webservice do eSocial e interpreta retornos.
 | Interface               | Consumida por              | Implementações previstas                                        | Motivo da inversão                                           |
 |-------------------------|----------------------------|-----------------------------------------------------------------|--------------------------------------------------------------|
 | `IRepositorioASO`       | `AptidaoService`           | `RepositorioASOPostgres`, `RepositorioASOInMemory` (testes)     | Isola o serviço de negócio do banco de dados concreto.       |
-| `IExportadorRelatorio`  | `GeradorRelatorioPGR`      | `ExportadorPDFRelatorio`, `ExportadorHTMLRelatorio`             | Permite trocar o formato de saída sem alterar a lógica PGR.  |
+| `IExportadorRelatorio`  | `GeradorRelatorioPGR`      | `ExportadorHTMLRelatorio`, `ExportadorJSONRelatorio` (`ExportadorPDFRelatorio` previsto) | Permite trocar o formato de saída sem alterar a lógica PGR.  |
 | `IValidadorSchema`      | `MontadorXMLeSocial`       | `ValidadorSchemaS12`, `ValidadorSchemaMock` (testes)            | Isola o montador da biblioteca XSD concreta.                 |
 | `IClienteESocial`       | `ServicoEnvioESocial`      | `ClienteWSeSocialGovBr`, `ClienteESocialSandbox`, `ClienteESocialMock` | Permite testar envios sem chamar o webservice real. |
 
@@ -287,13 +325,17 @@ Envia eventos ao webservice do eSocial e interpreta retornos.
 |---|-------------------------|--------------------------|---------------------|---------------|---------------|
 | 1 | `Empresa`               | `Colaborador`            | **Composição**      | 1 → 1..*      | Colaboradores existem apenas dentro do contexto de uma empresa no SaaS. |
 | 2 | `Colaborador`           | `ASO`                    | **Composição**      | 1 → 0..*      | Um ASO não existe sem um colaborador — é indissociável. |
-| 3 | `Empresa`               | `Risco`                  | **Agregação**       | 1 → 0..*      | Riscos podem ser catalogados genericamente e reutilizados em várias empresas. |
+| 2b| `Colaborador`           | `Acidente`               | **Composição**      | 1 → 0..*      | O acidente é sempre de um trabalhador identificado; sem ele não há CAT. |
+| 3 | `Empresa`               | `Risco`                  | **Composição**      | 1 → 0..*      | O risco descreve o ambiente de *uma* empresa e integra o PGR dela; não sobrevive à exclusão do tenant. |
 | 4 | `ASO`                   | `EventoESocial`          | **Associação**      | 1 → 0..1      | Cada ASO referencia o evento S-2220 correspondente; ciclos de vida independentes. |
+| 4b| `Acidente`              | `EventoESocial`          | **Associação**      | 1 → 0..1      | Cada acidente referencia o evento S-2210 (CAT) correspondente. |
 | 5 | `Colaborador`           | `EventoESocial`          | **Associação**      | 1 → 0..*      | Todo evento eSocial é sobre um colaborador; relação de auditoria. |
 | 6 | `AptidaoService`        | `IRepositorioASO`        | **Dependência DIP** | — → 1         | Alto nível depende da abstração, não do banco concreto. |
 | 7 | `GeradorRelatorioPGR`   | `IExportadorRelatorio`   | **Dependência DIP** | — → 1         | Alto nível depende da abstração, não da biblioteca PDF. |
 | 8 | `MontadorXMLeSocial`    | `IValidadorSchema`       | **Dependência DIP** | — → 1         | Alto nível depende da abstração, não da biblioteca XSD. |
 | 9 | `ServicoEnvioESocial`   | `IClienteESocial`        | **Dependência DIP** | — → 1         | Alto nível depende da abstração, não do cliente HTTP concreto. |
+
+> **Decisão sobre a relação 3.** O esboço inicial classificava `Empresa → Risco` como agregação, supondo um catálogo de riscos genérico compartilhado entre empresas. A implementação adotou composição: cada risco pertence ao PGR de um único tenant (`empresa_id` obrigatório, exclusão em cascata), porque severidade e probabilidade são avaliadas no ambiente concreto daquela empresa e não são transferíveis. Um catálogo genérico reutilizável, se vier a ser necessário, será um modelo próprio (`RiscoModelo`) do qual o `Risco` da empresa é instanciado — sem alterar esta relação.
 
 ---
 

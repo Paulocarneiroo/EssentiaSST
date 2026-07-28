@@ -1,4 +1,5 @@
 import { apiClient } from './client.js';
+import type { AvaliacaoAptidao } from '../types/aptidao.js';
 import type {
   Colaborador,
   CreateColaboradorData,
@@ -6,9 +7,12 @@ import type {
 } from '../types/colaborador.js';
 
 export const colaboradorApi = {
-  list(empresaId?: string): Promise<Colaborador[]> {
-    const query = empresaId ? `?empresaId=${encodeURIComponent(empresaId)}` : '';
-    return apiClient.request<Colaborador[]>(`/colaboradores${query}`);
+  list(): Promise<Colaborador[]> {
+    return apiClient.request<Colaborador[]>('/colaboradores');
+  },
+
+  getById(id: string): Promise<Colaborador> {
+    return apiClient.request<Colaborador>(`/colaboradores/${id}`);
   },
 
   create(data: CreateColaboradorData): Promise<Colaborador> {
@@ -21,5 +25,9 @@ export const colaboradorApi = {
 
   remove(id: string): Promise<void> {
     return apiClient.request<void>(`/colaboradores/${id}`, { method: 'DELETE' });
+  },
+
+  aptidao(id: string): Promise<AvaliacaoAptidao> {
+    return apiClient.request<AvaliacaoAptidao>(`/colaboradores/${id}/aptidao`);
   },
 };

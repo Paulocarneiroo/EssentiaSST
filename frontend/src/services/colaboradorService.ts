@@ -1,56 +1,78 @@
 import { colaboradorApi } from '../api/colaboradorApi.js';
-import type {
-  Colaborador,
-  CreateColaboradorData,
-  UpdateColaboradorData,
-} from '../types/colaborador.js';
+import { getEmpresaId } from '../state/session.js';
+import type { AvaliacaoAptidao } from '../types/aptidao.js';
+import type { Colaborador, CreateColaboradorData } from '../types/colaborador.js';
+import { onlyDigits } from './format.js';
 
-const onlyDigits = (value: string): string => value.replace(/\D/g, '');
+/** Dados do formulário, antes de receber o tenant e a normalização. */
+export interface ColaboradorFormData {
+  cpf: string;
+  nome: string;
+  dataNascimento: string;
+  cargo: string;
+  dataAdmissao: string;
+  dataDemissao?: string | null;
+}
+
+const paraPayload = (input: ColaboradorFormData): CreateColaboradorData => ({
+  // H1.3: a empresa é sempre a do usuário autenticado, nunca escolhida na tela.
+  empresaId: getEmpresaId() ?? '',
+  cpf: onlyDigits(input.cpf),
+  nome: input.nome.trim(),
+  dataNascimento: input.dataNascimento,
+  cargo: input.cargo.trim(),
+  dataAdmissao: input.dataAdmissao,
+  dataDemissao: input.dataDemissao || null,
+});
 
 export const colaboradorService = {
-  async list(empresaId?: string): Promise<Colaborador[]> {
-    return colaboradorApi.list(empresaId);
+  async listar(): Promise<Colaborador[]> {
+    const colaboradores = await colaboradorApi.list();
+    return [...colaboradores].sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
   },
 
-  async create(input: CreateColaboradorData): Promise<Colaborador> {
-    return colaboradorApi.create({
-      ...input,
-      cpf: onlyDigits(input.cpf),
-      nome: input.nome.trim(),
-      cargo: input.cargo.trim(),
-      dataDemissao: input.dataDemissao || null,
-    });
+  async buscar(id: string): Promise<Colaborador> {
+    return colaboradorApi.getById(id);
   },
 
-  async update(id: string, input: CreateColaboradorData): Promise<Colaborador> {
-    const payload: UpdateColaboradorData = {
-      empresaId: input.empresaId,
-      cpf: onlyDigits(input.cpf),
-      nome: input.nome.trim(),
-      dataNascimento: input.dataNascimento,
-      cargo: input.cargo.trim(),
-      dataAdmissao: input.dataAdmissao,
-      dataDemissao: input.dataDemissao || null,
-    };
-    return colaboradorApi.update(id, payload);
+  async criar(input: ColaboradorFormData): Promise<Colaborador> {
+    return colaboradorApi.create(paraPayload(input));
   },
 
-  async remove(id: string): Promise<void> {
+  async atualizar(id: string, input: ColaboradorFormData): Promise<Colaborador> {
+    return colaboradorApi.update(id, paraPayload(input));
+  },
+
+  /** H1.2 — o desligamento registra a data de demissão e preserva o histórico. */
+  async desligar(id: string, dataDemissao: string): Promise<Colaborador> {
+    return colaboradorApi.update(id, { dataDemissao });
+  },
+
+  async reativar(id: string): Promise<Colaborador> {
+    return colaboradorApi.update(id, { dataDemissao: null });
+  },
+
+  async remover(id: string): Promise<void> {
     return colaboradorApi.remove(id);
   },
 
-  formatCpf(cpf: string): string {
-    const digits = onlyDigits(cpf).padStart(11, '0').slice(0, 11);
-    return digits.replace(/^(\d{3})(\d{3})(\d{3})(\d{2})$/, '$1.$2.$3-$4');
+  async aptidao(id: string): Promise<AvaliacaoAptidao> {
+    return colaboradorApi.aptidao(id);
   },
 
-  formatDate(date: string | null): string {
-    if (!date) return '—';
-    const [year, month, day] = date.split('T')[0].split('-');
-    return `${day}/${month}/${year}`;
+  /** Aptidão de vários colaboradores; falhas isoladas não derrubam a listagem. */
+  async aptidoes(ids: string[]): Promise<Map<string, AvaliacaoAptidao>> {
+    const resultados = await Promise.allSettled(ids.map((id) => colaboradorApi.aptidao(id)));
+    const mapa = new Map<string, AvaliacaoAptidao>();
+    resultados.forEach((resultado, indice) => {
+      if (resultado.status === 'fulfilled') {
+        mapa.set(ids[indice], resultado.value);
+      }
+    });
+    return mapa;
   },
 
-  toDateInput(date: string | null): string {
-    return date ? date.split('T')[0] : '';
+  ativo(colaborador: Colaborador): boolean {
+    return !colaborador.dataDemissao;
   },
 };

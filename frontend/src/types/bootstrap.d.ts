@@ -3,6 +3,7 @@ declare const bootstrap: {
     element: Element,
     options?: {
       delay?: number;
+      autohide?: boolean;
     },
   ) => {
     show(): void;
@@ -15,6 +16,10 @@ declare const bootstrap: {
       keyboard?: boolean;
     },
   ) => {
+    show(): void;
+    hide(): void;
+  };
+  Dropdown: new (element: Element) => {
     show(): void;
     hide(): void;
   };
