@@ -1,5 +1,5 @@
-import { apiClient } from './client.js';
-import type { Acidente, CreateAcidenteData, UpdateAcidenteData } from '../types/acidente.js';
+import { apiClient } from './client';
+import type { Acidente, CreateAcidenteData, UpdateAcidenteData } from '../types/acidente';
 
 export const acidenteApi = {
   list(colaboradorId?: string): Promise<Acidente[]> {

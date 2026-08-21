@@ -1,15 +1,15 @@
-import type { ResultadoAso, TipoExame } from '../types/aso.js';
-import type { SituacaoAptidao } from '../types/aptidao.js';
+import type { ResultadoAso, TipoExame } from '../types/aso';
+import type { SituacaoAptidao } from '../types/aptidao';
 import type {
   AgenteCausador,
   ParteAtingida,
   TipoAcidente,
   TipoCat,
   TipoLesao,
-} from '../types/acidente.js';
-import type { AmbienteESocial, StatusEventoESocial, TipoEventoESocial } from '../types/evento.js';
-import type { ClassificacaoRisco, TipoRisco } from '../types/risco.js';
-import type { Papel } from '../types/usuario.js';
+} from '../types/acidente';
+import type { AmbienteESocial, StatusEventoESocial, TipoEventoESocial } from '../types/evento';
+import type { ClassificacaoRisco, TipoRisco } from '../types/risco';
+import type { Papel } from '../types/usuario';
 
 /** Cores do Bootstrap usadas nos badges. */
 export type Variant = 'primary' | 'secondary' | 'success' | 'danger' | 'warning' | 'info' | 'dark';

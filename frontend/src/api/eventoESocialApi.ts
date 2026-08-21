@@ -1,5 +1,5 @@
-import { apiClient } from './client.js';
-import type { EventoESocial } from '../types/evento.js';
+import { apiClient } from './client';
+import type { EventoESocial } from '../types/evento';
 
 export const eventoESocialApi = {
   list(): Promise<EventoESocial[]> {

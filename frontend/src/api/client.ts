@@ -1,6 +1,6 @@
-import { getApiBaseUrl } from './config.js';
-import { clearSessao, getToken } from '../state/session.js';
-import type { ApiError } from '../types/api.js';
+import { getApiBaseUrl } from './config';
+import { clearSessao, getToken } from '../state/session';
+import type { ApiError } from '../types/api';
 
 export class HttpError extends Error {
   readonly status: number;

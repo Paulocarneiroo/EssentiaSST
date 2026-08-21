@@ -1,4 +1,4 @@
-import { acidenteApi } from '../api/acidenteApi.js';
+import { acidenteApi } from '../api/acidenteApi';
 import type {
   Acidente,
   AgenteCausador,
@@ -8,8 +8,8 @@ import type {
   TipoCat,
   TipoLesao,
   UpdateAcidenteData,
-} from '../types/acidente.js';
-import { toHoraLeiaute } from './format.js';
+} from '../types/acidente';
+import { toHoraLeiaute } from './format';
 
 export interface AcidenteFormData {
   colaboradorId: string;

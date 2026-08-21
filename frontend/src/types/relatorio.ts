@@ -1,4 +1,4 @@
-import type { ClassificacaoRisco, TipoRisco } from './risco.js';
+import type { ClassificacaoRisco, TipoRisco } from './risco';
 
 export interface ItemRelatorioPGR {
   id: string;

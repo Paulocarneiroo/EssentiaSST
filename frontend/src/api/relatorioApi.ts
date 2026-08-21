@@ -1,5 +1,5 @@
-import { apiClient } from './client.js';
-import type { RelatorioPGR } from '../types/relatorio.js';
+import { apiClient } from './client';
+import type { RelatorioPGR } from '../types/relatorio';
 
 export const relatorioApi = {
   /** Documento HTML pronto para exibição, montado pelo exportador do backend. */

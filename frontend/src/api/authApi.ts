@@ -1,5 +1,5 @@
-import { apiClient } from './client.js';
-import type { AuthResult, LoginData, RegisterData, Usuario } from '../types/usuario.js';
+import { apiClient } from './client';
+import type { AuthResult, LoginData, RegisterData, Usuario } from '../types/usuario';
 
 export const authApi = {
   login(data: LoginData): Promise<AuthResult> {

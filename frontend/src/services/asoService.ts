@@ -1,5 +1,5 @@
-import { asoApi } from '../api/asoApi.js';
-import type { Aso, CreateAsoData, ResultadoAso, TipoExame, UpdateAsoData } from '../types/aso.js';
+import { asoApi } from '../api/asoApi';
+import type { Aso, CreateAsoData, ResultadoAso, TipoExame, UpdateAsoData } from '../types/aso';
 
 export interface AsoFormData {
   colaboradorId: string;

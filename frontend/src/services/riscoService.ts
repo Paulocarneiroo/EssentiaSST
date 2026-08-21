@@ -1,12 +1,12 @@
-import { riscoApi } from '../api/riscoApi.js';
-import { getEmpresaId } from '../state/session.js';
+import { riscoApi } from '../api/riscoApi';
+import { getEmpresaId } from '../state/session';
 import {
   calcularNivelRisco,
   type CreateRiscoData,
   type Risco,
   type TipoRisco,
   type UpdateRiscoData,
-} from '../types/risco.js';
+} from '../types/risco';
 
 export interface RiscoFormData {
   descricao: string;

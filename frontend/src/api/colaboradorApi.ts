@@ -1,10 +1,10 @@
-import { apiClient } from './client.js';
-import type { AvaliacaoAptidao } from '../types/aptidao.js';
+import { apiClient } from './client';
+import type { AvaliacaoAptidao } from '../types/aptidao';
 import type {
   Colaborador,
   CreateColaboradorData,
   UpdateColaboradorData,
-} from '../types/colaborador.js';
+} from '../types/colaborador';
 
 export const colaboradorApi = {
   list(): Promise<Colaborador[]> {

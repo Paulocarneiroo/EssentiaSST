@@ -1,11 +1,12 @@
-import { toastErro } from './toast.js';
+import { useState, type FormEvent } from 'react';
+import { toastErro } from './toast';
 
 export interface SubmitOptions {
   /** Texto exibido no botão enquanto a requisição está em curso. */
   carregando?: string;
   /** Mensagem do toast quando o erro não traz uma própria. */
   erroPadrao?: string;
-  /** Exibe o erro em `[data-role="erro"]` dentro do formulário, além do toast. */
+  /** Exibe o erro em um alerta dentro do formulário, além do toast. */
   erroInline?: boolean;
 }
 
@@ -13,51 +14,37 @@ export interface SubmitOptions {
  * Liga o submit de um formulário a um handler assíncrono, cuidando de estado do
  * botão, validação nativa do HTML e exibição de erro.
  */
-export const bindSubmit = (
-  form: HTMLFormElement,
+export const useFormSubmit = (
   handler: (form: HTMLFormElement) => Promise<void>,
-  { carregando = 'Salvando...', erroPadrao = 'Não foi possível concluir a operação.', erroInline = false }: SubmitOptions = {},
-): void => {
-  const botao = form.querySelector('button[type="submit"]') as HTMLButtonElement | null;
-  const alerta = form.querySelector('[data-role="erro"]') as HTMLElement | null;
+  {
+    carregando = 'Salvando...',
+    erroPadrao = 'Não foi possível concluir a operação.',
+    erroInline = false,
+  }: SubmitOptions = {},
+) => {
+  const [busy, setBusy] = useState(false);
+  const [erro, setErro] = useState<string | null>(null);
 
-  form.addEventListener('submit', async (event) => {
+  const onSubmit = async (event: FormEvent<HTMLFormElement>): Promise<void> => {
     event.preventDefault();
+    const form = event.currentTarget;
     if (!form.reportValidity()) return;
 
-    alerta?.classList.add('d-none');
-
-    const rotulo = botao?.innerHTML ?? '';
-    if (botao) {
-      botao.disabled = true;
-      botao.innerHTML = `<span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>${carregando}`;
-    }
+    setErro(null);
+    setBusy(true);
 
     try {
       await handler(form);
     } catch (error) {
-      if (erroInline && alerta) {
-        alerta.textContent = error instanceof Error ? error.message : erroPadrao;
-        alerta.classList.remove('d-none');
+      if (erroInline) {
+        setErro(error instanceof Error ? error.message : erroPadrao);
       } else {
         toastErro(error, erroPadrao);
       }
     } finally {
-      if (botao) {
-        botao.disabled = false;
-        botao.innerHTML = rotulo;
-      }
+      setBusy(false);
     }
-  });
-};
+  };
 
-/** Registra um handler de clique para cada elemento com o `data-action` informado. */
-export const bindAction = (
-  raiz: ParentNode,
-  acao: string,
-  handler: (elemento: HTMLElement, event: Event) => void,
-): void => {
-  raiz.querySelectorAll<HTMLElement>(`[data-action="${acao}"]`).forEach((elemento) => {
-    elemento.addEventListener('click', (event) => handler(elemento, event));
-  });
+  return { onSubmit, busy, erro, carregando };
 };

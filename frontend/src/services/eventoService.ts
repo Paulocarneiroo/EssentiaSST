@@ -1,5 +1,5 @@
-import { eventoESocialApi } from '../api/eventoESocialApi.js';
-import type { EventoESocial, StatusEventoESocial } from '../types/evento.js';
+import { eventoESocialApi } from '../api/eventoESocialApi';
+import type { EventoESocial, StatusEventoESocial } from '../types/evento';
 
 export const eventoService = {
   /** Últimos eventos primeiro — a fila de acompanhamento da conformidade. */

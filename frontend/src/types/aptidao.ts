@@ -1,4 +1,4 @@
-import type { Aso } from './aso.js';
+import type { Aso } from './aso';
 
 export type SituacaoAptidao =
   | 'APTO'

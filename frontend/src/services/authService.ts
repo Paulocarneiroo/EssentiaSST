@@ -1,9 +1,9 @@
-import { authApi } from '../api/authApi.js';
-import { empresaApi } from '../api/empresaApi.js';
-import { clearSessao, setSessao, setUsuario } from '../state/session.js';
-import type { CreateEmpresaData } from '../types/empresa.js';
-import type { AuthResult, LoginData, Papel, Usuario } from '../types/usuario.js';
-import { onlyDigits } from './format.js';
+import { authApi } from '../api/authApi';
+import { empresaApi } from '../api/empresaApi';
+import { clearSessao, setSessao, setUsuario } from '../state/session';
+import type { CreateEmpresaData } from '../types/empresa';
+import type { AuthResult, LoginData, Papel, Usuario } from '../types/usuario';
+import { onlyDigits } from './format';
 
 export interface NovaContaData {
   empresa: CreateEmpresaData;

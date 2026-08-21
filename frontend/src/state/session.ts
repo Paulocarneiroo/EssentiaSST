@@ -1,5 +1,5 @@
-import { createStore } from './store.js';
-import type { Papel, Usuario } from '../types/usuario.js';
+import { createStore } from './store';
+import type { Papel, Usuario } from '../types/usuario';
 
 const STORAGE_KEY = 'essentia:sessao';
 

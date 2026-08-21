@@ -1,5 +1,5 @@
-import { apiClient } from './client.js';
-import type { CreateRiscoData, Risco, UpdateRiscoData } from '../types/risco.js';
+import { apiClient } from './client';
+import type { CreateRiscoData, Risco, UpdateRiscoData } from '../types/risco';
 
 export const riscoApi = {
   list(): Promise<Risco[]> {

@@ -1,7 +1,7 @@
-import { empresaApi } from '../api/empresaApi.js';
-import { getEmpresaId } from '../state/session.js';
-import type { Empresa, UpdateEmpresaData } from '../types/empresa.js';
-import { onlyDigits } from './format.js';
+import { empresaApi } from '../api/empresaApi';
+import { getEmpresaId } from '../state/session';
+import type { Empresa, UpdateEmpresaData } from '../types/empresa';
+import { onlyDigits } from './format';
 
 const empresaIdDaSessao = (): string => {
   const id = getEmpresaId();

@@ -1,5 +1,5 @@
-import { apiClient } from './client.js';
-import type { CreateEmpresaData, Empresa, UpdateEmpresaData } from '../types/empresa.js';
+import { apiClient } from './client';
+import type { CreateEmpresaData, Empresa, UpdateEmpresaData } from '../types/empresa';
 
 export const empresaApi = {
   /** Escopada ao tenant: devolve apenas a empresa do usuário autenticado. */

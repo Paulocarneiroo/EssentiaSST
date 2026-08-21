@@ -1,8 +1,8 @@
-import { colaboradorApi } from '../api/colaboradorApi.js';
-import { getEmpresaId } from '../state/session.js';
-import type { AvaliacaoAptidao } from '../types/aptidao.js';
-import type { Colaborador, CreateColaboradorData } from '../types/colaborador.js';
-import { onlyDigits } from './format.js';
+import { colaboradorApi } from '../api/colaboradorApi';
+import { getEmpresaId } from '../state/session';
+import type { AvaliacaoAptidao } from '../types/aptidao';
+import type { Colaborador, CreateColaboradorData } from '../types/colaborador';
+import { onlyDigits } from './format';
 
 /** Dados do formulário, antes de receber o tenant e a normalização. */
 export interface ColaboradorFormData {

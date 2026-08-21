@@ -1,5 +1,5 @@
-import { apiClient } from './client.js';
-import type { Aso, CreateAsoData, UpdateAsoData } from '../types/aso.js';
+import { apiClient } from './client';
+import type { Aso, CreateAsoData, UpdateAsoData } from '../types/aso';
 
 export const asoApi = {
   list(colaboradorId?: string): Promise<Aso[]> {
