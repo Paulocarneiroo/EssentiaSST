@@ -8,14 +8,6 @@ const required = (key: string): string => {
   return value;
 };
 
-export interface DatabaseConfig {
-  host: string;
-  port: number;
-  name: string;
-  user: string;
-  password: string;
-}
-
 export interface JwtConfig {
   secret: string;
   expiresIn: string;
@@ -38,7 +30,8 @@ export interface AppEnv {
   /** Interface de rede onde o servidor escuta. `0.0.0.0` aceita conexões da LAN. */
   host: string;
   port: number;
-  db: DatabaseConfig;
+  /** Connection string do Prisma (`DATABASE_URL`). */
+  databaseUrl: string;
   jwt: JwtConfig;
   esocial: ESocialConfig;
 }
@@ -82,13 +75,8 @@ export const env: AppEnv = {
   host: process.env.HOST ?? '0.0.0.0',
   port: Number(process.env.PORT ?? 3000),
 
-  db: {
-    host: required('DB_HOST'),
-    port: Number(required('DB_PORT')),
-    name: required('DB_NAME'),
-    user: required('DB_USER'),
-    password: required('DB_PASSWORD'),
-  },
+  // Prisma lê DATABASE_URL diretamente; validamos aqui para falhar cedo no boot.
+  databaseUrl: required('DATABASE_URL'),
 
   jwt: {
     secret: process.env.JWT_SECRET ?? 'dev-secret',

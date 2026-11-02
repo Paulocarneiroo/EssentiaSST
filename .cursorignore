@@ -1,0 +1,123 @@
+# Dependências
+**/node_modules/
+**/bower_components/
+**/vendor/
+
+# Build / artefatos gerados
+**/dist/
+**/build/
+**/out/
+**/coverage/
+**/.nyc_output/
+**/.turbo/
+**/.next/
+**/.nuxt/
+**/.cache/
+**/tmp/
+**/temp/
+**/postgres-data/
+
+# Source maps e bundles
+**/*.map
+**/*.min.js
+**/*.min.css
+**/bundle.js
+**/chunk-*.js
+
+# Lockfiles (grandes e pouco úteis no contexto)
+**/package-lock.json
+**/yarn.lock
+**/pnpm-lock.yaml
+**/npm-shrinkwrap.json
+
+# Variáveis de ambiente e segredos
+**/.env
+**/.env.*
+!**/.env.example
+frontend/env.js
+
+# Logs
+**/logs/
+**/*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Editores / IDEs / agentes
+**/.idea/
+**/.vscode/
+**/.vs/
+**/.claude/
+**/.cursor/
+!**/.cursorignore
+!**/.cursorrules
+
+# Sistema operacional
+**/.DS_Store
+**/Thumbs.db
+**/desktop.ini
+**/ehthumbs.db
+
+# Git (já ignorado pelo Cursor, reforço)
+.git/
+
+# Binários e documentos pesados (alto consumo de tokens)
+**/*.pdf
+**/*.docx
+**/*.doc
+**/*.pptx
+**/*.ppt
+**/*.xlsx
+**/*.xls
+**/*.odt
+**/*.ods
+**/*.odp
+
+# Mídia e assets binários
+**/*.png
+**/*.jpg
+**/*.jpeg
+**/*.gif
+**/*.webp
+**/*.ico
+**/*.bmp
+**/*.tiff
+**/*.svg
+**/*.mp4
+**/*.mp3
+**/*.wav
+**/*.webm
+**/*.avi
+**/*.mov
+**/*.zip
+**/*.rar
+**/*.7z
+**/*.tar
+**/*.gz
+**/*.tgz
+**/*.woff
+**/*.woff2
+**/*.ttf
+**/*.otf
+**/*.eot
+
+# Relatórios / dumps gerados
+**/lighthouse-*.json
+**/*-a11y.json
+**/playwright-report/
+**/test-results/
+**/junit.xml
+**/coverage-final.json
+
+# Prisma engines / gerados (quando presentes)
+**/prisma/generated/
+**/*.db
+**/*.db-journal
+**/*.sqlite
+**/*.sqlite3
+
+# Conteúdo volumoso de geração de TCC (não é código da app)
+docs/tcc-gerador/content*.js
+docs/tcc-gerador/figuras.js
+docs/tcc-gerador/svg-figuras.js

@@ -6,13 +6,11 @@
 
 ## 1. Sobre o projeto
 
-O **EssentiaSST** será um software web, modular e escalável, voltado para a Gestão de Segurança e Saúde no Trabalho (SST) de empresas brasileiras, com ênfase em micro, pequenas e médias empresas (MPMEs). A plataforma reúne, em módulos independentes, as principais rotinas exigidas pela legislação trabalhista (NRs, ISO 45001, eSocial-SST) e propõe um modelo de contratação *pague pelo que usar*, com interface centrada no usuário.
-
-O projeto compõe a avaliação da disciplina de **Programação Web**, sob ministração do Prof. Rodrigo Alves Costa.
+O **EssentiaSST** será um software web, modular e escalável, voltado para a Gestão de Segurança e Saúde no Trabalho (SST) de empresas brasileiras, com ênfase em micro, pequenas e médias empresas (MPMEs). A plataforma reúne, em módulos independentes, as principais rotinas exigidas pela legislação trabalhista (NRs, ISO 45001, eSocial-SST), com interface centrada no usuário.
 
 ### 1.1 Problema
 
-- Sistemas comerciais de SST (SOC, RSData, SGG, IndexMed) são robustos, mas frequentemente complexos e financeiramente inviáveis para MPMEs.
+- Sistemas comerciais de SST (SOC, RSData, SGG, IndexMed) são robustos, mas frequentemente complexos demais para MPMEs.
 - A digitalização das obrigações de SST pelo eSocial (eventos S-2210, S-2220 e S-2240) impôs prazos rígidos e validações de *schema* (leiaute S-1.2) que aumentaram a barreira técnica para pequenos empregadores.
 - Falhas de conformidade resultam em multas, perda de benefícios previdenciários e, sobretudo, aumento de acidentes ocupacionais.
 
@@ -20,7 +18,7 @@ O projeto compõe a avaliação da disciplina de **Programação Web**, sob mini
 
 - Reduzir em ≥ 30 % o tempo gasto em tarefas rotineiras de SST.
 - Eliminar falhas de envio ao eSocial (taxa de rejeição = 0 %).
-- Oferecer conformidade legal a custos acessíveis para MPMEs.
+- Facilitar a conformidade legal para MPMEs.
 
 ---
 

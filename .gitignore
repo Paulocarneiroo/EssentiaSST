@@ -1,0 +1,9 @@
+# IDEs / ferramentas locais
+.idea/
+.claude/
+
+# Env gerado (scripts/gen-env.mjs) — máquina-específico
+frontend/env.js
+**/.env
+**/.env.*
+!**/.env.example
